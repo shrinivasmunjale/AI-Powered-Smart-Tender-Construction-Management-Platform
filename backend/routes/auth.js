@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const { User, Contractor } = require('../models');
 const { authenticateToken, JWT_SECRET } = require('../middleware/auth');
 const notifier = require('../utils/notifier');
+const auditLogger = require('../utils/auditLogger');
 
 // Register a User (or Contractor)
 router.post('/register', async (req, res) => {
@@ -58,6 +59,16 @@ router.post('/register', async (req, res) => {
       user: { id: user.id, email: user.email, role: user.role }
     });
 
+    // Audit log (after response)
+    await auditLogger.log({
+      userId: user.id,
+      action: auditLogger.ACTIONS.REGISTER,
+      entityType: 'user',
+      entityId: user.id,
+      details: { email: user.email, role: user.role },
+      req
+    });
+
   } catch (err) {
     console.error('Registration error:', err);
     res.status(500).json({ error: 'An error occurred during registration.' });
@@ -101,6 +112,16 @@ router.post('/login', async (req, res) => {
         verificationStatus: user.Contractor ? user.Contractor.verificationStatus : null,
         companyName: user.Contractor ? user.Contractor.companyName : null
       }
+    });
+
+    // Audit log (after response)
+    await auditLogger.log({
+      userId: user.id,
+      action: auditLogger.ACTIONS.LOGIN,
+      entityType: 'user',
+      entityId: user.id,
+      details: { email: user.email, role: user.role },
+      req
     });
 
   } catch (err) {

@@ -4,12 +4,19 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
-const { sequelize, User, Contractor, Tender, Bid } = require('./models');
+const { sequelize, User, Contractor, Tender, Bid, Project, Payment } = require('./models');
 const authRoutes = require('./routes/auth');
 const tenderRoutes = require('./routes/tenders');
 const contractorRoutes = require('./routes/contractors');
 const bidRoutes = require('./routes/bids');
 const notificationRoutes = require('./routes/notifications');
+const projectRoutes = require('./routes/projects');
+const paymentRoutes = require('./routes/payments');
+const materialRoutes = require('./routes/materials');
+const inspectionRoutes = require('./routes/inspections');
+const aiChatRoutes = require('./routes/ai-chat');
+const dashboardRoutes = require('./routes/dashboard');
+const { runMigrations } = require('./utils/migrations');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -37,6 +44,12 @@ app.use('/api/tenders', tenderRoutes);
 app.use('/api/contractors', contractorRoutes);
 app.use('/api/bids', bidRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/materials', materialRoutes);
+app.use('/api/inspections', inspectionRoutes);
+app.use('/api/ai-chat', aiChatRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
@@ -214,6 +227,8 @@ async function seedDatabase() {
 sequelize.sync({ force: false })
   .then(async () => {
     console.log('Database synchronized.');
+    // Repair columns missing from older DB snapshots (idempotent).
+    await runMigrations();
     await seedDatabase();
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);

@@ -5,6 +5,7 @@ const { Tender, Bid, Contractor, User } = require('../models');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const upload = require('../utils/uploader');
 const notifier = require('../utils/notifier');
+const auditLogger = require('../utils/auditLogger');
 
 // Create a new Tender (Admin only, supports document upload)
 router.post('/', authenticateToken, requireRole('admin'), upload.single('document'), async (req, res) => {
@@ -43,6 +44,16 @@ router.post('/', authenticateToken, requireRole('admin'), upload.single('documen
     res.status(201).json({
       message: 'Tender created successfully.',
       tender
+    });
+
+    // Audit log
+    await auditLogger.log({
+      userId: req.user.id,
+      action: tender.status === 'published' ? auditLogger.ACTIONS.TENDER_PUBLISHED : auditLogger.ACTIONS.TENDER_CREATED,
+      entityType: 'tender',
+      entityId: tender.id,
+      details: { title: tender.title, category: tender.category, estimatedBudget: tender.estimatedBudget },
+      req
     });
 
   } catch (err) {
@@ -159,6 +170,18 @@ router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => 
       tender
     });
 
+    // Audit log
+    await auditLogger.log({
+      userId: req.user.id,
+      action: (previousStatus === 'draft' && status === 'published') ? 
+        auditLogger.ACTIONS.TENDER_PUBLISHED : 
+        auditLogger.ACTIONS.TENDER_UPDATED,
+      entityType: 'tender',
+      entityId: tender.id,
+      details: { changes: req.body, previousStatus, newStatus: status },
+      req
+    });
+
   } catch (err) {
     console.error('Update tender error:', err);
     res.status(500).json({ error: 'Failed to update tender.' });
@@ -226,6 +249,20 @@ router.post('/:id/award', authenticateToken, requireRole('admin'), async (req, r
     res.json({
       message: 'Tender successfully awarded.',
       tender
+    });
+
+    // Audit log
+    await auditLogger.log({
+      userId: req.user.id,
+      action: auditLogger.ACTIONS.TENDER_AWARDED,
+      entityType: 'tender',
+      entityId: tender.id,
+      details: { 
+        awardedBidId: winningBid.id, 
+        contractorName: winningBid.Contractor.companyName,
+        bidPrice: winningBid.price
+      },
+      req
     });
 
   } catch (err) {

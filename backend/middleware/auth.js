@@ -39,10 +39,15 @@ async function authenticateToken(req, res, next) {
   });
 }
 
-function requireRole(role) {
+function requireRole(roles) {
+  // Support both single role string and array of roles
+  const allowedRoles = Array.isArray(roles) ? roles : [roles];
+  
   return (req, res, next) => {
-    if (!req.user || req.user.role !== role) {
-      return res.status(403).json({ error: `Forbidden. Action requires ${role} privileges.` });
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ 
+        error: `Forbidden. Action requires one of these roles: ${allowedRoles.join(', ')}` 
+      });
     }
     next();
   };
