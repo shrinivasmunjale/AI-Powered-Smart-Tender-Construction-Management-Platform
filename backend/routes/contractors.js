@@ -33,8 +33,8 @@ router.put('/upload-docs', authenticateToken, requireRole('contractor'), upload.
   }
 });
 
-// Admin lists all contractors
-router.get('/', authenticateToken, requireRole('admin'), async (req, res) => {
+// List contractors (admin + project management roles can read for project assignments)
+router.get('/', authenticateToken, requireRole(['admin', 'engineer', 'project_manager']), async (req, res) => {
   try {
     const contractors = await Contractor.findAll({
       include: [{ model: User, attributes: ['email'] }]

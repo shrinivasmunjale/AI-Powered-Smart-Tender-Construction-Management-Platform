@@ -28,6 +28,68 @@ const Contractor = sequelize.define('Contractor', {
   verificationDocument: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+  gstNumber: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  panNumber: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  address: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  city: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  state: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  pincode: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  yearsOfExperience: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 0
+  },
+  rating: {
+    type: DataTypes.FLOAT,
+    allowNull: true,
+    defaultValue: 0,
+    validate: {
+      min: 0,
+      max: 5
+    }
+  },
+  completedProjects: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 0
+  },
+  performanceScore: {
+    type: DataTypes.FLOAT,
+    allowNull: true,
+    defaultValue: 0
+  },
+  certificates: {
+    type: DataTypes.JSON, // Array of certificate objects
+    allowNull: true,
+    defaultValue: []
+  },
+  workHistory: {
+    type: DataTypes.JSON, // Array of work history objects
+    allowNull: true,
+    defaultValue: []
+  },
+  verificationExpiryDate: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 }, {
   timestamps: true
