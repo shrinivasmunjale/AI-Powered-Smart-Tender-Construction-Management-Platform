@@ -1,0 +1,357 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  super_admin
+  admin
+  organization
+  engineer
+  contractor
+  finance_officer
+  project_manager
+}
+
+enum VerificationStatus {
+  pending
+  verified
+  rejected
+}
+
+enum TenderStatus {
+  draft
+  published
+  under_evaluation
+  awarded
+  closed
+}
+
+enum BidStatus {
+  submitted
+  under_review
+  accepted
+  rejected
+}
+
+enum ProjectStatus {
+  planning
+  foundation
+  construction
+  finishing
+  inspection
+  completed
+  on_hold
+  cancelled
+}
+
+enum PaymentType {
+  advance
+  milestone
+  final
+  penalty
+}
+
+enum PaymentStatus {
+  requested
+  engineer_approved
+  finance_approved
+  released
+  rejected
+}
+
+enum InspectionStatus {
+  passed
+  failed
+  needs_review
+}
+
+enum NotificationChannel {
+  email
+  sms
+}
+
+enum DocumentType {
+  tender
+  bid
+  contract
+  certificate
+  other
+}
+
+enum AnalysisStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+enum MessageRole {
+  user
+  assistant
+  system
+}
+
+model User {
+  id                 Int            @id @default(autoincrement())
+  email              String         @unique
+  password           String
+  role               Role           @default(contractor)
+  firstName          String?
+  lastName           String?
+  phone              String?
+  organizationName   String?
+  registrationNumber String?
+  approvalStatus     String         @default("pending")
+  approvalNotes      String?        @db.Text
+  approvedAt         DateTime?
+  approvedBy         Int?
+  isActive           Boolean        @default(true)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  Contractor         Contractor?
+  CreatedTenders     Tender[]       @relation("OrganizationTenders")
+  AuditLogs          AuditLog[]
+  Notifications      Notification[]
+  ChatMessages       ChatMessage[]
+
+  @@map("Users")
+}
+
+model Contractor {
+  id                     Int                @id @default(autoincrement())
+  userId                 Int                @unique
+  companyName            String
+  registrationNumber     String             @unique
+  technicalCapacity      String?            @db.Text
+  verificationStatus     VerificationStatus @default(pending)
+  verificationDocument   String?
+  gstNumber              String?
+  panNumber              String?
+  address                String?            @db.Text
+  city                   String?
+  state                  String?
+  pincode                String?
+  yearsOfExperience      Int?               @default(0)
+  rating                 Float?             @default(0)
+  completedProjects      Int?               @default(0)
+  performanceScore       Float?             @default(0)
+  certificates           Json?              @default("[]")
+  workHistory            Json?              @default("[]")
+  verificationExpiryDate DateTime?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  User                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Bids                   Bid[]
+  Projects               Project[]
+  Payments               Payment[]
+
+  @@map("Contractors")
+}
+
+model Tender {
+  id               Int                @id @default(autoincrement())
+  title            String
+  description      String             @db.Text
+  category         String
+  estimatedBudget  Decimal            @db.Decimal(15, 2)
+  deadline         DateTime
+  status           TenderStatus       @default(draft)
+  documentPath     String?
+  awardedBidId     Int?
+  organizationId   Int?
+  organizationName String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  Organization     User?              @relation("OrganizationTenders", fields: [organizationId], references: [id], onDelete: SetNull)
+  AwardedBid       Bid?               @relation("AwardedBid", fields: [awardedBidId], references: [id], onDelete: SetNull)
+  Bids             Bid[]              @relation("TenderBids")
+  Project          Project?
+  DocumentAnalyses DocumentAnalysis[]
+
+  @@map("Tenders")
+}
+
+model Bid {
+  id                Int          @id @default(autoincrement())
+  tenderId          Int
+  contractorId      Int
+  price             Decimal      @db.Decimal(15, 2)
+  duration          Int
+  technicalProposal String       @db.Text
+  documentPath      String?
+  status            BidStatus    @default(submitted)
+  score             Float?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  Tender            Tender       @relation("TenderBids", fields: [tenderId], references: [id], onDelete: Cascade)
+  Contractor        Contractor   @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  AwardedInTenders  Tender[]     @relation("AwardedBid")
+
+  @@map("Bids")
+}
+
+model Project {
+  id                Int           @id @default(autoincrement())
+  tenderId          Int?          @unique
+  contractorId      Int?
+  name              String
+  department        String
+  startDate         DateTime
+  endDate           DateTime
+  budget            Decimal       @db.Decimal(15, 2)
+  actualCost        Decimal?      @default(0) @db.Decimal(15, 2)
+  status            ProjectStatus @default(planning)
+  progress          Int           @default(0)
+  location          String?
+  latitude          Float?
+  longitude         Float?
+  description       String?       @db.Text
+  assignedEngineers Json?         @default("[]")
+  milestones        Json?         @default("[]")
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  Tender            Tender?       @relation(fields: [tenderId], references: [id], onDelete: SetNull)
+  Contractor        Contractor?   @relation(fields: [contractorId], references: [id], onDelete: SetNull)
+  Inspections       Inspection[]
+  Payments          Payment[]
+
+  @@map("Projects")
+}
+
+model Payment {
+  id                Int           @id @default(autoincrement())
+  projectId         Int
+  contractorId      Int
+  amount            Decimal       @db.Decimal(15, 2)
+  paymentType       PaymentType
+  status            PaymentStatus @default(requested)
+  invoiceNumber     String?       @unique
+  invoicePath       String?
+  taxAmount         Decimal?      @default(0) @db.Decimal(15, 2)
+  description       String?       @db.Text
+  verificationNotes String?       @db.Text
+  approvedBy        Int?
+  releasedAt        DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  Project           Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  Contractor        Contractor    @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+
+  @@map("Payments")
+}
+
+model Inspection {
+  id               Int              @id @default(autoincrement())
+  projectId        Int
+  inspectionDate   DateTime         @default(now())
+  inspectorName    String
+  notes            String?          @db.Text
+  defects          Json?            @default("[]")
+  safetyViolations Json?            @default("[]")
+  media            Json?            @default("[]")
+  weather          String?
+  latitude         Float?
+  longitude        Float?
+  status           InspectionStatus @default(needs_review)
+  reportPath       String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  Project          Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("Inspections")
+}
+
+model Material {
+  id           Int      @id @default(autoincrement())
+  name         String
+  category     String
+  unit         String
+  currentStock Float    @default(0)
+  minimumStock Float    @default(0)
+  unitPrice    Decimal? @db.Decimal(10, 2)
+  warehouse    String?
+  description  String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("Materials")
+}
+
+model Notification {
+  id        Int                 @id @default(autoincrement())
+  userId    Int
+  recipient String
+  channel   NotificationChannel
+  subject   String?
+  body      String              @db.Text
+  createdAt DateTime            @default(now())
+
+  User      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("Notifications")
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int?
+  action     String
+  entityType String
+  entityId   Int?
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  User       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("AuditLogs")
+}
+
+model DocumentAnalysis {
+  id           Int            @id @default(autoincrement())
+  tenderId     Int?
+  documentPath String
+  documentType DocumentType   @default(tender)
+  extractedData Json          @default("{}")
+  rawText      String?        @db.Text
+  confidence   Float?
+  status       AnalysisStatus @default(pending)
+  errorMessage String?        @db.Text
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  Tender       Tender?        @relation(fields: [tenderId], references: [id], onDelete: SetNull)
+
+  @@map("DocumentAnalyses")
+}
+
+model ChatMessage {
+  id        Int         @id @default(autoincrement())
+  userId    Int?
+  sessionId String
+  role      MessageRole
+  content   String      @db.Text
+  context   Json?
+  metadata  Json?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  User      User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ChatMessages")
+}

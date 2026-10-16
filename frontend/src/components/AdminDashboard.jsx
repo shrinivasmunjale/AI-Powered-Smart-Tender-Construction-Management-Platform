@@ -1,635 +1,512 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Users, DollarSign, Award, ChevronRight, Check, X, Shield, PlusCircle, BarChart2 } from 'lucide-react';
+import { 
+  ShieldCheck, 
+  Users, 
+  Building2, 
+  FileText, 
+  Check, 
+  X, 
+  Clock, 
+  AlertCircle, 
+  Eye, 
+  Activity, 
+  Calendar, 
+  Phone, 
+  Mail, 
+  Hash, 
+  Search,
+  Filter
+} from 'lucide-react';
 
 export default function AdminDashboard({ token }) {
-  const [tenders, setTenders] = useState([]);
-  const [contractors, setContractors] = useState([]);
-  const [selectedTender, setSelectedTender] = useState(null);
-  const [comparison, setComparison] = useState(null);
+  const [activeTab, setActiveTab] = useState('authorizations'); // 'authorizations' | 'tender_activity'
+  const [approvalFilter, setApprovalFilter] = useState('pending'); // 'pending' | 'approved' | 'rejected' | 'all'
   
-  // Form states for creating tender
-  const [newTender, setNewTender] = useState({
-    title: '',
-    description: '',
-    category: 'Infrastructure',
-    estimatedBudget: '',
-    deadline: '',
-    status: 'published' // publish immediately by default
+  // Data states
+  const [requestsData, setRequestsData] = useState({
+    summary: { totalPending: 0, totalApproved: 0, totalRejected: 0, totalUsers: 0 },
+    pending: [],
+    approved: [],
+    rejected: [],
+    all: []
   });
-  const [tenderFile, setTenderFile] = useState(null);
-  const [isCreating, setIsCreating] = useState(false);
-  const [loadingTenders, setLoadingTenders] = useState(false);
-  const [loadingContractors, setLoadingContractors] = useState(false);
-  const [loadingCompare, setLoadingCompare] = useState(false);
+  const [tenders, setTenders] = useState([]);
+  const [selectedTender, setSelectedTender] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Loading & Feedback
+  const [loading, setLoading] = useState(false);
+  const [processingId, setProcessingId] = useState(null);
   const [feedbackMsg, setFeedbackMsg] = useState('');
 
-  // Fetch Tenders and Contractors
-  const fetchData = async () => {
-    setLoadingTenders(true);
-    setLoadingContractors(true);
+  // Fetch Authorization Requests
+  const fetchAuthorizations = async () => {
+    setLoading(true);
     try {
-      const tendersRes = await fetch('http://localhost:5000/api/tenders', {
+      const res = await fetch('http://localhost:5000/api/auth/approval-requests', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (tendersRes.ok) {
-        const data = await tendersRes.json();
-        setTenders(data);
-      }
-
-      const contractorsRes = await fetch('http://localhost:5000/api/contractors', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (contractorsRes.ok) {
-        const data = await contractorsRes.json();
-        setContractors(data);
+      if (res.ok) {
+        const data = await res.json();
+        setRequestsData(data);
       }
     } catch (err) {
-      console.error('Error fetching admin data:', err);
+      console.error('Error fetching approval requests:', err);
     } finally {
-      setLoadingTenders(false);
-      setLoadingContractors(false);
+      setLoading(false);
+    }
+  };
+
+  // Fetch All Tenders for Activity Monitoring
+  const fetchTenders = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/tenders', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTenders(data);
+      }
+    } catch (err) {
+      console.error('Error fetching tenders:', err);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    fetchAuthorizations();
+    fetchTenders();
   }, [token]);
 
-  // Handle Contractor Verification
-  const handleVerifyContractor = async (contractorId, status) => {
+  // Handle Approve User
+  const handleApproveUser = async (userId, userEmail, entityName) => {
+    setProcessingId(userId);
     try {
-      const res = await fetch(`http://localhost:5000/api/contractors/${contractorId}/verify`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status })
-      });
-      
-      if (res.ok) {
-        setFeedbackMsg(`Contractor profile successfully ${status}.`);
-        setTimeout(() => setFeedbackMsg(''), 4000);
-        fetchData();
-      } else {
-        const data = await res.json();
-        alert(data.error || 'Failed to update contractor status.');
-      }
-    } catch (err) {
-      console.error('Error verifying contractor:', err);
-    }
-  };
-
-  // Handle Create Tender Submission
-  const handleCreateTender = async (e) => {
-    e.preventDefault();
-    setIsCreating(true);
-    
-    const formData = new FormData();
-    formData.append('title', newTender.title);
-    formData.append('description', newTender.description);
-    formData.append('category', newTender.category);
-    formData.append('estimatedBudget', newTender.estimatedBudget);
-    formData.append('deadline', newTender.deadline);
-    formData.append('status', newTender.status);
-    if (tenderFile) {
-      formData.append('document', tenderFile);
-    }
-
-    try {
-      const res = await fetch('http://localhost:5000/api/tenders', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      if (res.ok) {
-        setFeedbackMsg('New tender published and notification alerts broadcasted to contractors.');
-        setTimeout(() => setFeedbackMsg(''), 5000);
-        setNewTender({
-          title: '',
-          description: '',
-          category: 'Infrastructure',
-          estimatedBudget: '',
-          deadline: '',
-          status: 'published'
-        });
-        setTenderFile(null);
-        fetchData();
-      } else {
-        const data = await res.json();
-        alert(data.error || 'Failed to create tender.');
-      }
-    } catch (err) {
-      console.error('Error creating tender:', err);
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  // Compare Bids for a Tender
-  const handleCompareBids = async (tender) => {
-    setSelectedTender(tender);
-    setLoadingCompare(true);
-    setComparison(null);
-
-    try {
-      const res = await fetch(`http://localhost:5000/api/bids/tender/${tender.id}/compare`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setComparison(data);
-      }
-    } catch (err) {
-      console.error('Error comparing bids:', err);
-    } finally {
-      setLoadingCompare(false);
-    }
-  };
-
-  // Award Tender to a Bid
-  const handleAwardTender = async (bidId) => {
-    if (!window.confirm('Are you sure you want to award this tender? This will notify the winner and decline other submissions.')) {
-      return;
-    }
-
-    try {
-      const res = await fetch(`http://localhost:5000/api/tenders/${selectedTender.id}/award`, {
+      const res = await fetch(`http://localhost:5000/api/auth/approve-user/${userId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ bidId })
+        body: JSON.stringify({ notes: 'Verified credentials and authorized by Administrator.' })
       });
 
       if (res.ok) {
-        setFeedbackMsg('Tender successfully awarded! Email and SMS alerts dispatched.');
+        setFeedbackMsg(`Successfully authorized login access for ${entityName || userEmail}!`);
         setTimeout(() => setFeedbackMsg(''), 5000);
-        // Refresh comparisons & tenders
-        handleCompareBids(selectedTender);
-        fetchData();
+        fetchAuthorizations();
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to award tender.');
+        alert(data.error || 'Failed to approve user.');
       }
     } catch (err) {
-      console.error('Error awarding tender:', err);
+      console.error('Error approving user:', err);
+    } finally {
+      setProcessingId(null);
     }
   };
 
-  // Calculate KPIs
-  const totalTenders = tenders.length;
-  const verifiedContractors = contractors.filter(c => c.verificationStatus === 'verified').length;
-  const pendingVerifications = contractors.filter(c => c.verificationStatus === 'pending');
-  const awardedValue = tenders
-    .filter(t => t.status === 'awarded' && t.estimatedBudget)
-    .reduce((acc, t) => acc + parseFloat(t.estimatedBudget), 0);
+  // Handle Reject User
+  const handleRejectUser = async (userId, userEmail) => {
+    const reason = window.prompt('Enter reason for rejecting this authorization request:', 'Verification details do not match official registry.');
+    if (reason === null) return; // user cancelled
+
+    setProcessingId(userId);
+    try {
+      const res = await fetch(`http://localhost:5000/api/auth/reject-user/${userId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ notes: reason })
+      });
+
+      if (res.ok) {
+        setFeedbackMsg(`Authorization request for ${userEmail} was rejected.`);
+        setTimeout(() => setFeedbackMsg(''), 5000);
+        fetchAuthorizations();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to reject user.');
+      }
+    } catch (err) {
+      console.error('Error rejecting user:', err);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  // Current list filtered by tab status
+  const currentList = approvalFilter === 'all' 
+    ? requestsData.all 
+    : requestsData[approvalFilter] || [];
+
+  const filteredUsers = currentList.filter(u => {
+    const q = searchTerm.toLowerCase();
+    const entity = (u.organizationName || u.Contractor?.companyName || '').toLowerCase();
+    const email = (u.email || '').toLowerCase();
+    const reg = (u.registrationNumber || u.Contractor?.registrationNumber || '').toLowerCase();
+    return entity.includes(q) || email.includes(q) || reg.includes(q);
+  });
 
   return (
     <div className="admin-dashboard">
+      
+      {/* Header */}
+      <div style={{ marginBottom: '1.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+          <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(2, 132, 199, 0.12)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ShieldCheck size={20} />
+          </div>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--app-text-primary)' }}>
+            Administrator Authorization & Oversight Portal
+          </h2>
+        </div>
+        <p style={{ margin: 0, color: 'var(--app-text-muted)', fontSize: '14px' }}>
+          Review registration credentials, authorize login access for Organizations and Contractors/Builders, and observe platform tender activities.
+        </p>
+      </div>
+
       {feedbackMsg && (
         <div style={{
-          background: 'rgba(62,207,142,0.15)',
+          background: 'rgba(16, 185, 129, 0.12)',
           border: '1px solid var(--success)',
           color: 'var(--success)',
-          padding: '16px',
-          borderRadius: '8px',
+          padding: '14px 18px',
+          borderRadius: '10px',
           marginBottom: '24px',
           fontSize: '14px',
-          fontWeight: 500
+          fontWeight: 600,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
         }}>
-          ✓ {feedbackMsg}
+          <Check size={18} /> {feedbackMsg}
         </div>
       )}
 
-      {/* KPIs Grid */}
-      <div className="stats-grid">
+      {/* KPI Stats */}
+      <div className="stats-grid" style={{ marginBottom: '2rem' }}>
+        <div className="stat-card">
+          <div className="stat-icon-wrapper warning">
+            <Clock size={20} />
+          </div>
+          <div className="stat-info">
+            <h4>Pending Approvals</h4>
+            <p>{requestsData.summary.totalPending}</p>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon-wrapper success">
+            <ShieldCheck size={20} />
+          </div>
+          <div className="stat-info">
+            <h4>Authorized Entities</h4>
+            <p>{requestsData.summary.totalApproved}</p>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon-wrapper info">
+            <Activity size={20} />
+          </div>
+          <div className="stat-info">
+            <h4>Active Tenders</h4>
+            <p>{tenders.filter(t => t.status === 'published').length}</p>
+          </div>
+        </div>
+
         <div className="stat-card">
           <div className="stat-icon-wrapper primary">
             <FileText size={20} />
           </div>
           <div className="stat-info">
-            <h4>Total Tenders</h4>
-            <p>{totalTenders}</p>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon-wrapper success">
-            <Users size={20} />
-          </div>
-          <div className="stat-info">
-            <h4>Verified Builders</h4>
-            <p>{verifiedContractors}</p>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon-wrapper warning">
-            <Shield size={20} />
-          </div>
-          <div className="stat-info">
-            <h4>Pending Verifications</h4>
-            <p>{pendingVerifications.length}</p>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon-wrapper primary">
-            <DollarSign size={20} />
-          </div>
-          <div className="stat-info">
-            <h4>Awarded Value</h4>
-            <p>${awardedValue.toLocaleString()}</p>
+            <h4>Total Platform Tenders</h4>
+            <p>{tenders.length}</p>
           </div>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-        {/* Publish a Tender Form */}
-        <div className="glass-card" style={{ marginBottom: 0 }}>
-          <h3 className="glass-card-title">
-            <span>Publish New Tender</span>
-            <PlusCircle size={20} style={{ color: 'var(--primary)' }} />
-          </h3>
-          <form onSubmit={handleCreateTender}>
-            <div className="form-group">
-              <label>Tender Title</label>
-              <input 
-                type="text" 
-                className="form-control" 
-                placeholder="e.g. Municipal Hospital Ventilation System"
-                value={newTender.title}
-                onChange={e => setNewTender({ ...newTender, title: e.target.value })}
-                required
+      {/* Top Navigation Tabs */}
+      <div style={{ display: 'flex', gap: '12px', borderBottom: '1px solid var(--app-border)', marginBottom: '1.5rem', paddingBottom: '8px' }}>
+        <button
+          onClick={() => setActiveTab('authorizations')}
+          style={{
+            padding: '10px 18px',
+            borderRadius: '10px',
+            border: 'none',
+            background: activeTab === 'authorizations' ? 'var(--primary)' : 'transparent',
+            color: activeTab === 'authorizations' ? '#ffffff' : 'var(--app-text-muted)',
+            fontWeight: 600,
+            fontSize: '14px',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <ShieldCheck size={18} />
+          <span>Entity Login Authorizations</span>
+          {requestsData.summary.totalPending > 0 && (
+            <span style={{ 
+              background: activeTab === 'authorizations' ? 'rgba(255,255,255,0.3)' : '#ef4444', 
+              color: '#ffffff', 
+              padding: '2px 8px', 
+              borderRadius: '999px', 
+              fontSize: '11px', 
+              fontWeight: 700 
+            }}>
+              {requestsData.summary.totalPending}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('tender_activity')}
+          style={{
+            padding: '10px 18px',
+            borderRadius: '10px',
+            border: 'none',
+            background: activeTab === 'tender_activity' ? 'var(--primary)' : 'transparent',
+            color: activeTab === 'tender_activity' ? '#ffffff' : 'var(--app-text-muted)',
+            fontWeight: 600,
+            fontSize: '14px',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <Activity size={18} />
+          <span>Tender Activity Oversight (Read-Only)</span>
+        </button>
+      </div>
+
+      {/* TAB 1: AUTHORIZATIONS & ACCOUNT APPROVALS */}
+      {activeTab === 'authorizations' && (
+        <div className="card" style={{ background: 'var(--app-bg-secondary)', border: '1px solid var(--app-border)', borderRadius: '14px', padding: '1.5rem', boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }}>
+          
+          {/* Sub-filter bar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                className={`btn btn-sm ${approvalFilter === 'pending' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setApprovalFilter('pending')}
+              >
+                Pending ({requestsData.summary.totalPending})
+              </button>
+              <button
+                className={`btn btn-sm ${approvalFilter === 'approved' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setApprovalFilter('approved')}
+              >
+                Authorized ({requestsData.summary.totalApproved})
+              </button>
+              <button
+                className={`btn btn-sm ${approvalFilter === 'rejected' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setApprovalFilter('rejected')}
+              >
+                Rejected ({requestsData.summary.totalRejected})
+              </button>
+              <button
+                className={`btn btn-sm ${approvalFilter === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setApprovalFilter('all')}
+              >
+                All Entities
+              </button>
+            </div>
+
+            <div style={{ position: 'relative', width: '260px' }}>
+              <Search size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--app-text-muted)' }} />
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Search entity, email, reg no..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ paddingLeft: '34px', height: '38px', fontSize: '13px' }}
               />
             </div>
-            
-            <div className="form-group">
-              <label>Tender Description</label>
-              <textarea 
-                className="form-control" 
-                placeholder="Describe project details, building standards, tech requirements..."
-                value={newTender.description}
-                onChange={e => setNewTender({ ...newTender, description: e.target.value })}
-                required
-              />
-            </div>
+          </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div className="form-group">
-                <label>Category</label>
-                <select 
-                  className="form-control"
-                  value={newTender.category}
-                  onChange={e => setNewTender({ ...newTender, category: e.target.value })}
-                >
-                  <option value="Infrastructure">Infrastructure</option>
-                  <option value="IT & Energy">IT & Energy</option>
-                  <option value="Environmental">Environmental</option>
-                  <option value="Civil Works">Civil Works</option>
-                  <option value="Sewerage">Sewerage</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Estimated Budget ($)</label>
-                <input 
-                  type="number" 
-                  className="form-control" 
-                  placeholder="e.g. 500000"
-                  value={newTender.estimatedBudget}
-                  onChange={e => setNewTender({ ...newTender, estimatedBudget: e.target.value })}
-                  required
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div className="form-group">
-                <label>Submission Deadline</label>
-                <input 
-                  type="datetime-local" 
-                  className="form-control"
-                  value={newTender.deadline}
-                  onChange={e => setNewTender({ ...newTender, deadline: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Tender Drawings/Specs (PDF/DWG)</label>
-                <input 
-                  type="file" 
-                  className="form-control"
-                  onChange={e => setTenderFile(e.target.files[0])}
-                />
-              </div>
-            </div>
-
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '8px' }} disabled={isCreating}>
-              {isCreating ? 'Broadcasting Alert and Publishing...' : 'Broadcast & Publish Tender'}
-            </button>
-          </form>
-        </div>
-
-        {/* Contractor Verification Board */}
-        <div className="glass-card" style={{ marginBottom: 0 }}>
-          <h3 className="glass-card-title">
-            <span>Contractor Verification Queue</span>
-            <Shield size={20} style={{ color: 'var(--warning)' }} />
-          </h3>
-          {loadingContractors ? (
-            <div style={{ color: 'var(--text-muted)' }}>Loading contractors list...</div>
-          ) : pendingVerifications.length === 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '80%', color: 'var(--text-muted)' }}>
-              <p style={{ margin: 0, fontSize: '14px' }}>No contractors awaiting verification.</p>
-              <p style={{ margin: '4px 0 0', fontSize: '12px' }}>Verified suppliers can bid on published tenders.</p>
+          {loading ? (
+            <p style={{ color: 'var(--app-text-muted)' }}>Loading authorization requests...</p>
+          ) : filteredUsers.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3.5rem 1rem', color: 'var(--app-text-muted)' }}>
+              <ShieldCheck size={42} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+              <p style={{ fontSize: '15px', fontWeight: 600 }}>No authorization requests found in this category.</p>
+              <p style={{ fontSize: '13px' }}>When new Corporations or Organizations register, their credentials will appear here for review.</p>
             </div>
           ) : (
-            <div className="table-wrapper" style={{ maxHeight: '340px', overflowY: 'auto' }}>
-              <table className="custom-table">
-                <thead>
-                  <tr>
-                    <th>Company</th>
-                    <th>Reg No.</th>
-                    <th>Credentials</th>
-                    <th style={{ textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingVerifications.map((con) => (
-                    <tr key={con.id}>
-                      <td>
-                        <div style={{ fontWeight: 600 }}>{con.companyName}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{con.technicalCapacity || 'No capacity description'}</div>
-                      </td>
-                      <td style={{ fontFamily: 'monospace' }}>{con.registrationNumber}</td>
-                      <td>
-                        {con.verificationDocument ? (
-                          <a 
-                            href={`http://localhost:5000${con.verificationDocument}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            style={{ color: 'var(--primary)', textDecoration: 'underline' }}
-                          >
-                            View Docs PDF
-                          </a>
-                        ) : (
-                          <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>No documents uploaded</span>
-                        )}
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', gap: '8px' }}>
-                          <button 
-                            className="btn btn-success btn-sm" 
-                            title="Verify profile"
-                            onClick={() => handleVerifyContractor(con.id, 'verified')}
-                          >
-                            <Check size={14} />
-                          </button>
-                          <button 
-                            className="btn btn-danger btn-sm" 
-                            title="Reject documentation"
-                            onClick={() => handleVerifyContractor(con.id, 'rejected')}
-                          >
-                            <X size={14} />
-                          </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {filteredUsers.map((user) => {
+                const entityName = user.organizationName || user.Contractor?.companyName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
+                const regNumber = user.registrationNumber || user.Contractor?.registrationNumber || 'N/A';
+                const isOrg = user.role === 'organization';
+                const isPending = user.approvalStatus === 'pending';
+
+                return (
+                  <div
+                    key={user.id}
+                    style={{
+                      padding: '18px',
+                      borderRadius: '12px',
+                      background: 'var(--app-bg-primary)',
+                      border: `1px solid ${isPending ? 'rgba(245, 158, 11, 0.3)' : 'var(--app-border)'}`,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '1rem'
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                      <div style={{ 
+                        width: 44, 
+                        height: 44, 
+                        borderRadius: '12px', 
+                        background: isOrg ? 'rgba(99, 102, 241, 0.12)' : 'rgba(16, 185, 129, 0.12)', 
+                        color: isOrg ? '#6366f1' : 'var(--success)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        {isOrg ? <Building2 size={22} /> : <Users size={22} />}
+                      </div>
+
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                          <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--app-text-primary)' }}>
+                            {entityName}
+                          </h4>
+                          <span className={`badge ${isOrg ? 'badge-info' : 'badge-primary'}`}>
+                            {isOrg ? 'ORGANIZATION (ISSUER)' : 'BUILDER / CONTRACTOR'}
+                          </span>
+                          <span className={`badge ${user.approvalStatus === 'approved' ? 'badge-success' : user.approvalStatus === 'rejected' ? 'badge-danger' : 'badge-warning'}`}>
+                            {user.approvalStatus.toUpperCase()}
+                          </span>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+                        <div style={{ display: 'flex', gap: '18px', fontSize: '13px', color: 'var(--app-text-muted)', flexWrap: 'wrap' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <Hash size={13} /> Reg ID: <strong>{regNumber}</strong>
+                          </span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <Mail size={13} /> {user.email}
+                          </span>
+                          {user.phone && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <Phone size={13} /> {user.phone}
+                            </span>
+                          )}
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <Calendar size={13} /> Registered: {new Date(user.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+
+                        {user.Contractor?.technicalCapacity && (
+                          <p style={{ margin: '8px 0 0', fontSize: '12px', color: 'var(--app-text-secondary)', fontStyle: 'italic' }}>
+                            Capacity: "{user.Contractor.technicalCapacity}"
+                          </p>
+                        )}
+                        {user.approvalNotes && (
+                          <p style={{ margin: '6px 0 0', fontSize: '12px', color: user.approvalStatus === 'rejected' ? '#ef4444' : 'var(--success)' }}>
+                            Note: {user.approvalNotes}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons for Admin Authorization */}
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      {user.approvalStatus !== 'approved' && (
+                        <button
+                          className="btn btn-primary btn-sm"
+                          disabled={processingId === user.id}
+                          onClick={() => handleApproveUser(user.id, user.email, entityName)}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}
+                        >
+                          <Check size={14} /> Authorize & Approve Login
+                        </button>
+                      )}
+
+                      {user.approvalStatus !== 'rejected' && (
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          disabled={processingId === user.id}
+                          onClick={() => handleRejectUser(user.id, user.email)}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#ef4444' }}
+                        >
+                          <X size={14} /> Reject
+                        </button>
+                      )}
+                    </div>
+
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
-      </div>
+      )}
 
-      {/* Tenders Pipeline Tracker */}
-      <div className="glass-card">
-        <h3 className="glass-card-title">Tender Operations & Bid Evaluations</h3>
-        {loadingTenders ? (
-          <div style={{ color: 'var(--text-muted)' }}>Loading tenders...</div>
-        ) : tenders.length === 0 ? (
-          <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '24px 0' }}>No tenders created yet. Use the form above to publish your first procurement.</div>
-        ) : (
-          <div className="table-wrapper">
-            <table className="custom-table">
+      {/* TAB 2: TENDER ACTIVITY MONITOR (READ-ONLY OVERSIGHT) */}
+      {activeTab === 'tender_activity' && (
+        <div className="card" style={{ background: 'var(--app-bg-secondary)', border: '1px solid var(--app-border)', borderRadius: '14px', padding: '1.5rem', boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }}>
+          <div style={{ marginBottom: '1.25rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--app-text-primary)' }}>
+              Platform Tender Activity Stream (Read-Only)
+            </h3>
+            <p style={{ margin: '4px 0 0', color: 'var(--app-text-muted)', fontSize: '13px' }}>
+              Admin oversight: Observe all live, evaluating, and awarded tenders published by Organizations.
+            </p>
+          </div>
+
+          <div className="table-responsive">
+            <table className="table">
               <thead>
                 <tr>
                   <th>Tender Title</th>
                   <th>Category</th>
-                  <th>Estimated Budget</th>
-                  <th>Deadline</th>
+                  <th>Issuing Organization</th>
+                  <th>Allocated Budget</th>
+                  <th>Submission Deadline</th>
                   <th>Status</th>
-                  <th style={{ textAlign: 'right' }}>Evaluations</th>
                 </tr>
               </thead>
               <tbody>
                 {tenders.map((tender) => (
                   <tr key={tender.id}>
                     <td>
-                      <div style={{ fontWeight: 600, fontSize: '15px' }}>{tender.title}</div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', maxWidth: '460px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                        {tender.description}
-                      </div>
+                      <strong style={{ color: 'var(--app-text-primary)' }}>{tender.title}</strong>
+                      <div style={{ fontSize: '12px', color: 'var(--app-text-muted)' }}>ID: #{tender.id}</div>
                     </td>
                     <td>{tender.category}</td>
-                    <td style={{ fontWeight: 500 }}>${parseFloat(tender.estimatedBudget).toLocaleString()}</td>
-                    <td>{new Date(tender.deadline).toLocaleDateString()} at {new Date(tender.deadline).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                     <td>
-                      <span className={`badge ${tender.status}`}>
-                        {tender.status.replace('_', ' ')}
+                      <span style={{ fontWeight: 600, color: 'var(--primary)' }}>
+                        {tender.organizationName || 'Department of Public Works'}
                       </span>
                     </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button 
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => handleCompareBids(tender)}
-                      >
-                        <BarChart2 size={14} />
-                        Analyze Bids
-                      </button>
+                    <td>
+                      <strong>${Number(tender.estimatedBudget).toLocaleString()}</strong>
+                    </td>
+                    <td>{new Date(tender.deadline).toLocaleDateString()}</td>
+                    <td>
+                      <span className={`badge ${tender.status === 'published' ? 'badge-success' : tender.status === 'awarded' ? 'badge-info' : 'badge-warning'}`}>
+                        {tender.status.toUpperCase()}
+                      </span>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
-
-      {/* Automatic Bid Comparison Drawer / Module */}
-      {selectedTender && (
-        <div className="glass-card" style={{ border: '1px solid var(--primary)' }}>
-          <div className="glass-card-title">
-            <div>
-              <span style={{ fontSize: '12px', color: 'var(--primary)', display: 'block', textTransform: 'uppercase', letterSpacing: '1px' }}>Automatic Comparison</span>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: '24px' }}>{selectedTender.title}</span>
-            </div>
-            <button className="btn btn-secondary btn-sm" onClick={() => setSelectedTender(null)}>Close Panel</button>
-          </div>
-
-          {loadingCompare ? (
-            <div style={{ color: 'var(--text-muted)' }}>Running comparison algorithms...</div>
-          ) : !comparison || comparison.rankings.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-muted)' }}>
-              No bids have been submitted for this tender yet. Once contractors bid, they will be ranked here.
-            </div>
-          ) : (
-            <div className="comparison-grid">
-              {/* Left Side: Table of Rankings and details */}
-              <div>
-                <h4 style={{ margin: '0 0 16px', fontSize: '16px' }}>Computed Composite Scoring Rankings (70% Price / 30% Timeline)</h4>
-                <div className="table-wrapper">
-                  <table className="custom-table">
-                    <thead>
-                      <tr>
-                        <th style={{ width: '40px' }}>Rank</th>
-                        <th>Contractor</th>
-                        <th>Price Offer</th>
-                        <th>Timeline</th>
-                        <th>Composite Score</th>
-                        <th>Deviation</th>
-                        <th>Status</th>
-                        <th style={{ textAlign: 'right' }}>Decision</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {comparison.rankings.map((bid, index) => {
-                        const isWinner = index === 0 && selectedTender.status !== 'awarded';
-                        const isAwardedWinner = selectedTender.status === 'awarded' && selectedTender.awardedBidId === bid.id;
-                        
-                        return (
-                          <tr key={bid.id} style={isAwardedWinner ? { background: 'rgba(62,207,142,0.06)' } : {}}>
-                            <td>
-                              <span style={{
-                                width: '24px',
-                                height: '24px',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifySelf: 'center',
-                                justifyContent: 'center',
-                                background: index === 0 ? 'var(--success)' : 'rgba(253,241,225,0.05)',
-                                color: index === 0 ? '#0b1110' : 'var(--text-bright)',
-                                fontWeight: 'bold',
-                                fontSize: '12px'
-                              }}>
-                                {index + 1}
-                              </span>
-                            </td>
-                            <td>
-                              <div style={{ fontWeight: 600 }}>{bid.contractor.companyName}</div>
-                              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{bid.contractor.email}</div>
-                              {bid.isCheapest && <span style={{ background: 'rgba(74,185,224,0.15)', color: 'var(--primary)', fontSize: '9px', padding: '2px 4px', borderRadius: '3px', marginRight: '4px', fontWeight: 600 }}>CHEAPEST</span>}
-                              {bid.isFastest && <span style={{ background: 'rgba(62,207,142,0.15)', color: 'var(--success)', fontSize: '9px', padding: '2px 4px', borderRadius: '3px', fontWeight: 600 }}>FASTEST</span>}
-                            </td>
-                            <td style={{ fontWeight: 600 }}>${bid.price.toLocaleString()}</td>
-                            <td>{bid.duration} days</td>
-                            <td>
-                              <div style={{ fontWeight: 'bold', color: index === 0 ? 'var(--success)' : 'var(--text-bright)' }}>{bid.scores.totalScore} pts</div>
-                              <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                                price: {bid.scores.priceScore} | speed: {bid.scores.durationScore}
-                              </div>
-                            </td>
-                            <td style={{ color: bid.budgetDeviation > 0 ? 'var(--danger)' : 'var(--success)' }}>
-                              {bid.budgetDeviation > 0 ? `+${bid.budgetDeviation}%` : `${bid.budgetDeviation}%`}
-                            </td>
-                            <td>
-                              <span className={`badge ${bid.status}`}>
-                                {bid.status}
-                              </span>
-                            </td>
-                            <td style={{ textAlign: 'right' }}>
-                              {selectedTender.status !== 'awarded' ? (
-                                <button 
-                                  className={`btn ${index === 0 ? 'btn-success' : 'btn-secondary'} btn-sm`}
-                                  onClick={() => handleAwardTender(bid.id)}
-                                >
-                                  Award
-                                </button>
-                              ) : isAwardedWinner ? (
-                                <span style={{ color: 'var(--success)', fontWeight: 'bold', fontSize: '12px', display: 'flex', alignExact: 'center', gap: '4px', justifyContent: 'flex-end' }}>
-                                  ✓ Contract Awarded
-                                </span>
-                              ) : (
-                                <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Declined</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Right Side: Graph Comparison chart */}
-              <div className="chart-card glass-card" style={{ background: 'rgba(253,241,225,0.02)', border: '1px solid var(--border-light)', margin: 0 }}>
-                <h4 style={{ margin: '0 0 16px', fontSize: '15px' }}>Offers vs Estimated Budget</h4>
-                <div className="bar-chart-container">
-                  {/* Estimated Budget column */}
-                  <div className="chart-bar-wrapper">
-                    <div 
-                      className="chart-bar budget" 
-                      style={{ height: '70%' }}
-                    >
-                      <div className="chart-tooltip">${comparison.stats.estimatedBudget.toLocaleString()}</div>
-                    </div>
-                    <div className="chart-label">Budget</div>
-                  </div>
-
-                  {/* Bids Columns */}
-                  {comparison.rankings.map((bid, index) => {
-                    const budget = parseFloat(selectedTender.estimatedBudget);
-                    const bidPrice = parseFloat(bid.price);
-                    
-                    // Normalize height relative to the max price in comparison
-                    const maxVal = Math.max(comparison.stats.maxPrice, budget) * 1.1;
-                    const heightPercent = Math.round((bidPrice / maxVal) * 100);
-                    
-                    const isWinner = index === 0;
-
-                    return (
-                      <div className="chart-bar-wrapper" key={bid.id}>
-                        <div 
-                          className={`chart-bar ${selectedTender.awardedBidId === bid.id || (selectedTender.status !== 'awarded' && isWinner) ? 'winner' : ''}`} 
-                          style={{ height: `${heightPercent}%` }}
-                        >
-                          <div className="chart-tooltip">${bidPrice.toLocaleString()}</div>
-                        </div>
-                        <div className="chart-label" title={bid.contractor.companyName}>
-                          {bid.contractor.companyName}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div style={{ fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Estimated Budget:</span>
-                    <span style={{ fontWeight: 600 }}>${comparison.stats.estimatedBudget.toLocaleString()}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Lowest Bid:</span>
-                    <span style={{ fontWeight: 600, color: 'var(--success)' }}>${comparison.stats.minPrice.toLocaleString()}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Average Bid:</span>
-                    <span style={{ fontWeight: 600 }}>${comparison.stats.avgPrice.toLocaleString()}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Highest Bid:</span>
-                    <span style={{ fontWeight: 600, color: 'var(--danger)' }}>${comparison.stats.maxPrice.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       )}
+
     </div>
   );
 }

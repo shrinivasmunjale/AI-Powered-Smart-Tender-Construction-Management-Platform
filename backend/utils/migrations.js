@@ -33,6 +33,45 @@ async function runMigrations() {
     type: DataTypes.INTEGER,
     allowNull: true,
   });
+  await ensureColumn('Users', 'organizationName', {
+    type: DataTypes.STRING,
+    allowNull: true,
+  });
+  await ensureColumn('Users', 'registrationNumber', {
+    type: DataTypes.STRING,
+    allowNull: true,
+  });
+  await ensureColumn('Users', 'approvalStatus', {
+    type: DataTypes.STRING,
+    allowNull: false,
+    defaultValue: 'pending',
+  });
+  await ensureColumn('Users', 'approvalNotes', {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  });
+  await ensureColumn('Users', 'approvedAt', {
+    type: DataTypes.DATE,
+    allowNull: true,
+  });
+  await ensureColumn('Users', 'approvedBy', {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  });
+  await ensureColumn('Tenders', 'organizationId', {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  });
+  await ensureColumn('Tenders', 'organizationName', {
+    type: DataTypes.STRING,
+    allowNull: true,
+  });
+
+  try {
+    await sequelize.query(`UPDATE "Users" SET "approvalStatus" = 'approved' WHERE "role" IN ('admin', 'super_admin') OR "approvalStatus" IS NULL;`);
+  } catch (e) {
+    // ignore if table doesn't have column yet
+  }
 }
 
 module.exports = { runMigrations, ensureColumn };

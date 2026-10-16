@@ -16,6 +16,7 @@ const materialRoutes = require('./routes/materials');
 const inspectionRoutes = require('./routes/inspections');
 const aiChatRoutes = require('./routes/ai-chat');
 const dashboardRoutes = require('./routes/dashboard');
+const publicRoutes = require('./routes/public');
 const { runMigrations } = require('./utils/migrations');
 
 const app = express();
@@ -50,6 +51,7 @@ app.use('/api/materials', materialRoutes);
 app.use('/api/inspections', inspectionRoutes);
 app.use('/api/ai-chat', aiChatRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/public', publicRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

@@ -86,7 +86,7 @@ router.get('/tender/:tenderId', authenticateToken, async (req, res) => {
     }
 
     let bids;
-    if (req.user.role === 'admin') {
+    if (req.user.role === 'admin' || req.user.role === 'organization') {
       bids = await Bid.findAll({
         where: { tenderId },
         include: [{ model: Contractor }]
@@ -106,8 +106,8 @@ router.get('/tender/:tenderId', authenticateToken, async (req, res) => {
   }
 });
 
-// Compare bids and calculate rankings (Admin only)
-router.get('/tender/:tenderId/compare', authenticateToken, requireRole('admin'), async (req, res) => {
+// Compare bids and calculate rankings (Organization & Admin)
+router.get('/tender/:tenderId/compare', authenticateToken, requireRole(['organization', 'admin']), async (req, res) => {
   const { tenderId } = req.params;
 
   try {

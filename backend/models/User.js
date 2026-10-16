@@ -20,7 +20,7 @@ const User = sequelize.define('User', {
     allowNull: false
   },
   role: {
-    type: DataTypes.ENUM('super_admin', 'admin', 'engineer', 'contractor', 'finance_officer', 'project_manager'),
+    type: DataTypes.ENUM('super_admin', 'admin', 'organization', 'engineer', 'contractor', 'finance_officer', 'project_manager'),
     allowNull: false,
     defaultValue: 'contractor'
   },
@@ -30,6 +30,31 @@ const User = sequelize.define('User', {
   },
   lastName: {
     type: DataTypes.STRING,
+    allowNull: true
+  },
+  organizationName: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  registrationNumber: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  approvalStatus: {
+    type: DataTypes.STRING, // 'pending', 'approved', 'rejected'
+    allowNull: false,
+    defaultValue: 'pending'
+  },
+  approvalNotes: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  approvedAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  approvedBy: {
+    type: DataTypes.INTEGER,
     allowNull: true
   },
   phone: {

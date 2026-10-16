@@ -1,26 +1,14 @@
 import React from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
-import CinematicLanding from './components/CinematicLanding';
+import LandingPage from './components/LandingPage';
 import { EnhancedDashboard } from './components/EnhancedDashboard';
 import { AuthPage } from './components/AuthPage';
 import './App.css';
 
-/**
- * Landing wrapper: routes the "Open Portal" CTA into real URLs.
- */
-const Landing = () => {
-  const navigate = useNavigate();
-  return (
-    <CinematicLanding
-      onEnterPortal={() => navigate('/portal/dashboard')}
-      onLogin={() => navigate('/auth/login')}
-      onRegister={() => navigate('/auth/register')}
-    />
-  );
-};
+const Landing = () => <LandingPage />;
 
 function App() {
   return (

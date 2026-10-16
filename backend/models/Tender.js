@@ -39,6 +39,14 @@ const Tender = sequelize.define('Tender', {
   awardedBidId: {
     type: DataTypes.INTEGER,
     allowNull: true
+  },
+  organizationId: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  organizationName: {
+    type: DataTypes.STRING,
+    allowNull: true
   }
 }, {
   timestamps: true

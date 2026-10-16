@@ -7,8 +7,8 @@ const upload = require('../utils/uploader');
 const notifier = require('../utils/notifier');
 const auditLogger = require('../utils/auditLogger');
 
-// Create a new Tender (Admin only, supports document upload)
-router.post('/', authenticateToken, requireRole('admin'), upload.single('document'), async (req, res) => {
+// Create a new Tender (Organization & Admin, supports document upload)
+router.post('/', authenticateToken, requireRole(['organization', 'admin']), upload.single('document'), async (req, res) => {
   const { title, description, category, estimatedBudget, deadline, status } = req.body;
 
   try {
@@ -21,7 +21,9 @@ router.post('/', authenticateToken, requireRole('admin'), upload.single('documen
       estimatedBudget: parseFloat(estimatedBudget),
       deadline: new Date(deadline),
       status: status || 'draft',
-      documentPath
+      documentPath,
+      organizationId: req.user.id,
+      organizationName: req.user.organizationName || req.user.companyName || 'Municipal Procurement Authority'
     });
 
     // If published, trigger notifications for contractors
@@ -127,8 +129,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Update Tender status or details (Admin only)
-router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+// Update Tender status or details (Organization & Admin)
+router.put('/:id', authenticateToken, requireRole(['organization', 'admin']), async (req, res) => {
   const { title, description, category, estimatedBudget, deadline, status } = req.body;
 
   try {
@@ -188,8 +190,8 @@ router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => 
   }
 });
 
-// Award Tender to a Bid (Admin only)
-router.post('/:id/award', authenticateToken, requireRole('admin'), async (req, res) => {
+// Award Tender to a Bid (Organization & Admin)
+router.post('/:id/award', authenticateToken, requireRole(['organization', 'admin']), async (req, res) => {
   const { bidId } = req.body;
 
   try {

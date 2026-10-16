@@ -33,6 +33,10 @@ Bid.belongsTo(Tender, { foreignKey: 'tenderId' });
 // Tender -> Bid (Awarded Bid relation, constraints disabled to prevent circular reference cycles)
 Tender.belongsTo(Bid, { as: 'AwardedBid', foreignKey: 'awardedBidId', constraints: false });
 
+// User (Organization) <-> Tender (One-to-Many)
+User.hasMany(Tender, { foreignKey: 'organizationId', as: 'CreatedTenders', onDelete: 'SET NULL' });
+Tender.belongsTo(User, { foreignKey: 'organizationId', as: 'Organization' });
+
 // Tender <-> Project (One-to-One)
 Tender.hasOne(Project, { foreignKey: 'tenderId', onDelete: 'SET NULL' });
 Project.belongsTo(Tender, { foreignKey: 'tenderId' });

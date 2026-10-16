@@ -1,11 +1,12 @@
 const { Sequelize } = require('sequelize');
 const path = require('path');
 
-const dbDialect = process.env.DB_DIALECT || 'sqlite';
+const connectionString = process.env.DIRECT_URL || process.env.DATABASE_URL;
+const resolvedDialect = process.env.DB_DIALECT || (connectionString && (connectionString.startsWith('postgres') ? 'postgres' : 'sqlite')) || 'sqlite';
 
 let sequelize;
 
-if (dbDialect === 'sqlite') {
+if (resolvedDialect === 'sqlite') {
   sequelize = new Sequelize({
     dialect: 'sqlite',
     storage: path.join(__dirname, '../database.sqlite'),
@@ -13,16 +14,15 @@ if (dbDialect === 'sqlite') {
   });
 } else {
   // MySQL or PostgreSQL using connection string or details
-  const connectionString = process.env.DATABASE_URL;
   if (connectionString) {
     sequelize = new Sequelize(connectionString, {
-      dialect: dbDialect,
+      dialect: resolvedDialect,
       logging: false,
-      dialectOptions: dbDialect === 'postgres' ? {
-        ssl: process.env.DB_SSL === 'true' ? {
+      dialectOptions: resolvedDialect === 'postgres' ? {
+        ssl: {
           require: true,
           rejectUnauthorized: false
-        } : false
+        }
       } : {}
     });
   } else {
