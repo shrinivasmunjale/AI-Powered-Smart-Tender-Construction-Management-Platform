@@ -10,11 +10,16 @@ import { MaterialsView } from './MaterialsView';
 import { InspectionsView } from './InspectionsView';
 import { ReportsView } from './ReportsView';
 import { AIChatView } from './AIChatView';
+import { ProfileView } from './ProfileView';
+import { AIChatBox } from './common/AIChatBox';
 
 // Existing dashboards
 import AdminDashboard from './AdminDashboard';
 import ContractorDashboard from './ContractorDashboard';
+import OrganizationDashboard from './OrganizationDashboard';
 import NotificationLogger from './NotificationLogger';
+import { ContractorsView } from './ContractorsView';
+import { AdminTendersView } from './AdminTendersView';
 
 /**
  * The portal shell. The active view is derived from the URL (/portal/:view),
@@ -37,11 +42,16 @@ export const EnhancedDashboard = () => {
         return <DashboardHome userRole={user?.role} />;
 
       case 'tenders':
-        return user?.role === 'admin' ? (
-          <AdminDashboard token={token} />
-        ) : (
+        if (user?.role === 'admin') {
+          return <AdminTendersView token={token} />;
+        }
+        if (user?.role === 'organization') {
+          return <OrganizationDashboard token={token} />;
+        }
+        return (
           <ContractorDashboard
             token={token}
+            userRole={user?.role}
             contractorStatus={user?.Contractor?.verificationStatus}
             companyName={user?.Contractor?.companyName}
             onStatusUpdate={() => {}}
@@ -49,11 +59,7 @@ export const EnhancedDashboard = () => {
         );
 
       case 'contractors':
-        return user?.role === 'admin' ? (
-          <AdminDashboard token={token} />
-        ) : (
-          <DashboardHome userRole={user?.role} />
-        );
+        return <ContractorsView userRole={user?.role} token={token} />;
 
       case 'projects':
         return <ProjectsView userRole={user?.role} />;
@@ -73,6 +79,9 @@ export const EnhancedDashboard = () => {
 
       case 'ai-assistant':
         return <AIChatView userRole={user?.role} userEmail={user?.email} />;
+
+      case 'profile':
+        return <ProfileView />;
 
       default:
         return (
@@ -96,6 +105,9 @@ export const EnhancedDashboard = () => {
       <main className={`app-main ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         {renderView()}
       </main>
+
+      {/* Floating omnipresent AI Chat assistant widget */}
+      <AIChatBox />
 
       {/* Keep notification logger */}
       <NotificationLogger token={token} />

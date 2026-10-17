@@ -18,9 +18,14 @@ import {
   Filter
 } from 'lucide-react';
 
-export default function AdminDashboard({ token }) {
-  const [activeTab, setActiveTab] = useState('authorizations'); // 'authorizations' | 'tender_activity'
-  const [approvalFilter, setApprovalFilter] = useState('pending'); // 'pending' | 'approved' | 'rejected' | 'all'
+export default function AdminDashboard({ token, defaultTab = 'authorizations' }) {
+  const [activeTab, setActiveTab] = useState(defaultTab); // 'authorizations' | 'tender_activity'
+  
+  useEffect(() => {
+    if (defaultTab) {
+      setActiveTab(defaultTab);
+    }
+  }, [defaultTab]);
   
   // Data states
   const [requestsData, setRequestsData] = useState({

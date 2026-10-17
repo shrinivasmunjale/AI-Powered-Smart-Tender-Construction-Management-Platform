@@ -2,10 +2,11 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User, Contractor } = require('../models');
+const { User, Contractor, Project, Payment, Bid } = require('../models');
 const { authenticateToken, JWT_SECRET } = require('../middleware/auth');
 const notifier = require('../utils/notifier');
 const auditLogger = require('../utils/auditLogger');
+const upload = require('../utils/uploader');
 
 // Register a User (or Contractor)
 router.post('/register', async (req, res) => {
@@ -18,6 +19,7 @@ router.post('/register', async (req, res) => {
     fullName, 
     phone, 
     companyName, 
+    organizationName, 
     registrationNumber, 
     technicalCapacity 
   } = req.body;
@@ -325,16 +327,264 @@ router.post('/reject-user/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Get profile
+// Get comprehensive profile with activity stats and completeness score
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id, {
       attributes: { exclude: ['password'] },
       include: [Contractor]
     });
-    res.json(user);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    let stats = {
+      projectsCount: 0,
+      completedProjectsCount: 0,
+      bidsCount: 0,
+      paymentsRequested: 0,
+      paymentsReleased: 0,
+      totalAmountEarned: 0
+    };
+
+    if (user.Contractor) {
+      const contractorId = user.Contractor.id;
+      const [projectsCount, completedCount, bidsCount, payments] = await Promise.all([
+        Project.count({ where: { contractorId } }).catch(() => 0),
+        Project.count({ where: { contractorId, status: 'completed' } }).catch(() => 0),
+        Bid.count({ where: { contractorId } }).catch(() => 0),
+        Payment.findAll({ where: { contractorId } }).catch(() => [])
+      ]);
+
+      let requested = 0;
+      let released = 0;
+      let earned = 0;
+      payments.forEach(p => {
+        if (p.status === 'requested') requested += 1;
+        if (p.status === 'released') {
+          released += 1;
+          earned += parseFloat(p.amount || 0);
+        }
+      });
+
+      stats = {
+        projectsCount,
+        completedProjectsCount: completedCount,
+        bidsCount,
+        paymentsRequested: requested,
+        paymentsReleased: released,
+        totalAmountEarned: earned
+      };
+    }
+
+    // Calculate profile completeness score (0 to 100)
+    let completeness = 30; // base account
+    if (user.firstName && user.lastName) completeness += 15;
+    if (user.phone) completeness += 10;
+    if (user.Contractor) {
+      if (user.Contractor.gstNumber) completeness += 15;
+      if (user.Contractor.panNumber) completeness += 10;
+      if (user.Contractor.technicalCapacity) completeness += 10;
+      if (user.Contractor.verificationDocument) completeness += 10;
+    } else if (user.organizationName) {
+      completeness += 30;
+    }
+    completeness = Math.min(100, completeness);
+
+    res.json({
+      ...user.toJSON(),
+      stats,
+      completeness
+    });
   } catch (err) {
+    console.error('Fetch profile error:', err);
     res.status(500).json({ error: 'Failed to retrieve profile.' });
+  }
+});
+
+// Update personal user profile
+router.put('/profile', authenticateToken, async (req, res) => {
+  const { firstName, lastName, phone, organizationName } = req.body;
+
+  try {
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    if (firstName !== undefined) user.firstName = firstName.trim();
+    if (lastName !== undefined) user.lastName = lastName.trim();
+    if (phone !== undefined) user.phone = phone.trim();
+    if (organizationName !== undefined) user.organizationName = organizationName.trim();
+
+    await user.save();
+
+    await auditLogger.log({
+      userId: user.id,
+      action: 'PROFILE_UPDATED',
+      entityType: 'user',
+      entityId: user.id,
+      details: { firstName, lastName, phone },
+      req
+    });
+
+    res.json({
+      message: 'Personal profile updated successfully.',
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
+        organizationName: user.organizationName,
+        role: user.role
+      }
+    });
+  } catch (err) {
+    console.error('Update profile error:', err);
+    res.status(500).json({ error: 'Failed to update profile.' });
+  }
+});
+
+// Update Contractor business profile & compliance details
+router.put('/profile/contractor', authenticateToken, async (req, res) => {
+  const {
+    companyName,
+    gstNumber,
+    panNumber,
+    registrationNumber,
+    technicalCapacity,
+    address,
+    city,
+    state,
+    pincode,
+    yearsOfExperience
+  } = req.body;
+
+  try {
+    let contractor = await Contractor.findOne({ where: { userId: req.user.id } });
+    if (!contractor) {
+      return res.status(404).json({ error: 'Contractor profile not found for this account.' });
+    }
+
+    if (companyName) contractor.companyName = companyName.trim();
+    if (gstNumber !== undefined) contractor.gstNumber = gstNumber.trim().toUpperCase();
+    if (panNumber !== undefined) contractor.panNumber = panNumber.trim().toUpperCase();
+    if (registrationNumber) contractor.registrationNumber = registrationNumber.trim();
+    if (technicalCapacity !== undefined) contractor.technicalCapacity = technicalCapacity.trim();
+    if (address !== undefined) contractor.address = address.trim();
+    if (city !== undefined) contractor.city = city.trim();
+    if (state !== undefined) contractor.state = state.trim();
+    if (pincode !== undefined) contractor.pincode = pincode.trim();
+    if (yearsOfExperience !== undefined) contractor.yearsOfExperience = Number(yearsOfExperience) || 0;
+
+    await contractor.save();
+
+    await auditLogger.log({
+      userId: req.user.id,
+      action: 'CONTRACTOR_PROFILE_UPDATED',
+      entityType: 'contractor',
+      entityId: contractor.id,
+      details: { companyName, gstNumber, panNumber },
+      req
+    });
+
+    res.json({
+      message: 'Contractor business credentials updated successfully.',
+      contractor
+    });
+  } catch (err) {
+    console.error('Update contractor profile error:', err);
+    res.status(500).json({ error: 'Failed to update contractor credentials.' });
+  }
+});
+
+// Upload verification documents or certificates
+router.post('/profile/upload-doc', authenticateToken, upload.single('document'), async (req, res) => {
+  const { title = 'Compliance Document', certificateType = 'Certificate' } = req.body;
+
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No document file provided.' });
+    }
+
+    const documentPath = `/uploads/${req.file.filename}`;
+    const contractor = await Contractor.findOne({ where: { userId: req.user.id } });
+
+    if (contractor) {
+      const currentCertificates = Array.isArray(contractor.certificates) ? [...contractor.certificates] : [];
+      const newCert = {
+        id: `cert-${Date.now()}`,
+        title,
+        type: certificateType,
+        path: documentPath,
+        filename: req.file.originalname,
+        uploadedAt: new Date().toISOString(),
+        status: 'verified'
+      };
+
+      currentCertificates.push(newCert);
+      contractor.certificates = currentCertificates;
+      contractor.verificationDocument = documentPath;
+      await contractor.save();
+
+      res.json({
+        message: 'Document uploaded successfully.',
+        certificate: newCert,
+        contractor
+      });
+    } else {
+      res.json({
+        message: 'Document uploaded successfully.',
+        path: documentPath
+      });
+    }
+  } catch (err) {
+    console.error('Upload document error:', err);
+    res.status(500).json({ error: 'Failed to upload document.' });
+  }
+});
+
+// Update password securely
+router.put('/profile/password', authenticateToken, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  try {
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current password and new password are required.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters.' });
+    }
+
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ error: 'Current password does not match.' });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    await auditLogger.log({
+      userId: user.id,
+      action: 'PASSWORD_CHANGED',
+      entityType: 'user',
+      entityId: user.id,
+      details: { email: user.email },
+      req
+    });
+
+    res.json({ message: 'Password updated successfully.' });
+  } catch (err) {
+    console.error('Password update error:', err);
+    res.status(500).json({ error: 'Failed to update password.' });
   }
 });
 

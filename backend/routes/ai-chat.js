@@ -3,6 +3,7 @@ const router = express.Router();
 const { ChatMessage, Tender, Contractor, User } = require('../models');
 const { authenticateToken } = require('../middleware/auth');
 const auditLogger = require('../utils/auditLogger');
+const { getGroqChatCompletion } = require('../utils/groq_service');
 
 // POST /api/ai-chat/send - Send a message to AI assistant
 router.post('/send', authenticateToken, async (req, res) => {
@@ -13,6 +14,17 @@ router.post('/send', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Session ID and message are required' });
     }
 
+    // Retrieve recent conversation history for rich context
+    const previousMessages = await ChatMessage.findAll({
+      where: { sessionId },
+      order: [['createdAt', 'DESC']],
+      limit: 6
+    });
+    const historyContext = previousMessages.reverse().map(m => ({
+      role: m.role,
+      content: m.content
+    }));
+
     // Save user message
     const userMessage = await ChatMessage.create({
       sessionId,
@@ -22,17 +34,28 @@ router.post('/send', authenticateToken, async (req, res) => {
       context: context || {}
     });
 
-    // Generate AI response based on context and message
-    const aiResponse = await generateAIResponse(message, context, req.user);
+    // Generate AI response using Groq LLM (or intelligent procurement engine fallback)
+    let aiResponseText = '';
+    let metadata = {};
+    try {
+      const groqResult = await getGroqChatCompletion(message, historyContext, req.user.role);
+      aiResponseText = groqResult.content;
+      metadata = { provider: groqResult.provider, model: groqResult.model };
+    } catch (llmErr) {
+      console.warn('LLM completion error, using local fallback:', llmErr.message);
+      const fallback = await generateAIResponse(message, context, req.user);
+      aiResponseText = fallback.content;
+      metadata = fallback.metadata || {};
+    }
 
     // Save AI response
     const assistantMessage = await ChatMessage.create({
       sessionId,
       userId: req.user.id,
       role: 'assistant',
-      content: aiResponse.content,
-      context: aiResponse.context || {},
-      metadata: aiResponse.metadata || {}
+      content: aiResponseText,
+      context: context || {},
+      metadata
     });
 
     await auditLogger.log({
@@ -40,14 +63,15 @@ router.post('/send', authenticateToken, async (req, res) => {
       action: 'AI_CHAT_INTERACTION',
       entityType: 'chat_message',
       entityId: sessionId,
-      details: { sessionId, message: message.substring(0, 100) },
+      details: { sessionId, message: message.substring(0, 100), provider: metadata.provider },
       req
     });
 
     res.json({
       userMessage,
       assistantMessage,
-      aiResponse: aiResponse.content
+      aiResponse: aiResponseText,
+      metadata
     });
   } catch (error) {
     console.error('AI Chat error:', error);
@@ -152,6 +176,35 @@ router.post('/recommend-tenders', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Tender recommendation error:', error);
     res.status(500).json({ error: 'Failed to generate recommendations', details: error.message });
+  }
+});
+
+// POST /api/ai-chat/summarize-tender/:id - Summarize a tender and assess key parameters
+router.post('/summarize-tender/:id', authenticateToken, async (req, res) => {
+  try {
+    const tender = await Tender.findByPk(req.params.id);
+    if (!tender) {
+      return res.status(404).json({ error: 'Tender not found' });
+    }
+
+    const summaryPrompt = `Analyze this government tender in 3 bulleted sections (Key Highlights, Eligibility Criteria, Critical Deadlines):
+Title: ${tender.title}
+Department/Category: ${tender.category || 'Civil Infrastructure'}
+Budget: ${tender.estimatedBudget ? `₹${Number(tender.estimatedBudget).toLocaleString()}` : 'Not specified'}
+Deadline: ${tender.deadline}
+Description: ${tender.description || 'Standard public works tender'}`;
+
+    const completion = await getGroqChatCompletion(summaryPrompt, [], req.user.role);
+
+    res.json({
+      tenderId: tender.id,
+      title: tender.title,
+      summary: completion.content,
+      metadata: { provider: completion.provider, model: completion.model }
+    });
+  } catch (error) {
+    console.error('Summarize tender error:', error);
+    res.status(500).json({ error: 'Failed to summarize tender', details: error.message });
   }
 });
 

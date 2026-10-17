@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, FileText, Search, Clock, Award, CheckCircle, Upload, AlertTriangle } from 'lucide-react';
 
-export default function ContractorDashboard({ token, contractorStatus, companyName, onStatusUpdate }) {
+export default function ContractorDashboard({ token, userRole = 'contractor', contractorStatus, companyName, onStatusUpdate }) {
   const [tenders, setTenders] = useState([]);
   const [myBids, setMyBids] = useState([]);
   
@@ -214,7 +214,7 @@ export default function ContractorDashboard({ token, contractorStatus, companyNa
           </div>
         </div>
         
-        {contractorStatus !== 'verified' && contractorStatus !== 'pending' && (
+        {userRole === 'contractor' && contractorStatus !== 'verified' && contractorStatus !== 'pending' && (
           <form onSubmit={handleUploadVerification} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <input 
               type="file" 

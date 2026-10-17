@@ -25,6 +25,7 @@ const navigationConfig = {
     { icon: <ClipboardCheck size={20} />, label: 'Inspections', id: 'inspections' },
     { icon: <BarChart3 size={20} />, label: 'Reports', id: 'reports' },
     { icon: <Bot size={20} />, label: 'AI Assistant', id: 'ai-assistant' },
+    { icon: <Settings size={20} />, label: 'Profile', id: 'profile' },
   ],
   contractor: [
     { icon: <LayoutDashboard size={20} />, label: 'Dashboard', id: 'dashboard' },
@@ -41,12 +42,14 @@ const navigationConfig = {
     { icon: <Package size={20} />, label: 'Materials', id: 'materials' },
     { icon: <DollarSign size={20} />, label: 'Approvals', id: 'approvals' },
     { icon: <Bot size={20} />, label: 'AI Assistant', id: 'ai-assistant' },
+    { icon: <Settings size={20} />, label: 'Profile', id: 'profile' },
   ],
   finance_officer: [
     { icon: <LayoutDashboard size={20} />, label: 'Dashboard', id: 'dashboard' },
     { icon: <DollarSign size={20} />, label: 'Payments', id: 'payments' },
     { icon: <BarChart3 size={20} />, label: 'Financial Reports', id: 'reports' },
     { icon: <Bot size={20} />, label: 'AI Assistant', id: 'ai-assistant' },
+    { icon: <Settings size={20} />, label: 'Profile', id: 'profile' },
   ],
   project_manager: [
     { icon: <LayoutDashboard size={20} />, label: 'Dashboard', id: 'dashboard' },
@@ -55,6 +58,7 @@ const navigationConfig = {
     { icon: <ClipboardCheck size={20} />, label: 'Inspections', id: 'inspections' },
     { icon: <Users size={20} />, label: 'Team', id: 'team' },
     { icon: <Bot size={20} />, label: 'AI Assistant', id: 'ai-assistant' },
+    { icon: <Settings size={20} />, label: 'Profile', id: 'profile' },
   ],
 };
 

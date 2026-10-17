@@ -1,11 +1,13 @@
 import React from 'react';
-import { Bell, LogOut, Menu, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, LogOut, Menu, ArrowLeft, User } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { useAuth } from '../../contexts/AuthContext';
 import { getInitials } from '../../utils/formatters';
 
 export const TopBar = ({ onBackToLanding, onToggleSidebar }) => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <header className="topbar">
@@ -36,7 +38,12 @@ export const TopBar = ({ onBackToLanding, onToggleSidebar }) => {
           <span className="notification-badge">3</span>
         </button>
 
-        <div className="topbar-user">
+        <div
+          className="topbar-user"
+          onClick={() => navigate('/portal/profile')}
+          title="Manage Account & Profile"
+          style={{ cursor: 'pointer' }}
+        >
           <div className="topbar-user-avatar">
             {user ? getInitials(user.email) : 'U'}
           </div>

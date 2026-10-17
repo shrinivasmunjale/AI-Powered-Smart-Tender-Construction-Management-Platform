@@ -43,7 +43,7 @@ export default function OrganizationDashboard({ token }) {
   const fetchTenders = async () => {
     setLoadingTenders(true);
     try {
-      const res = await fetch('http://localhost:5000/api/tenders', {
+      const res = await fetch('http://localhost:5000/api/tenders?mine=true', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {

@@ -74,6 +74,13 @@ export const authAPI = {
   login: (credentials) => api.post('/auth/login', credentials),
   register: (data) => api.post('/auth/register', data),
   profile: () => api.get('/auth/profile'),
+  updateProfile: (data) => api.put('/auth/profile', data),
+  updateContractor: (data) => api.put('/auth/profile/contractor', data),
+  changePassword: (data) => api.put('/auth/profile/password', data),
+  uploadDoc: (formData) => api.post('/auth/profile/upload-doc', formData),
+  getApprovalRequests: () => api.get('/auth/approval-requests'),
+  approveUser: (userId, notes = 'Authorized by Administrator') => api.post(`/auth/approve-user/${userId}`, { notes }),
+  rejectUser: (userId, notes = 'Verification details do not match official registry.') => api.post(`/auth/reject-user/${userId}`, { notes }),
 };
 
 export const tendersAPI = {
@@ -120,6 +127,8 @@ export const paymentsAPI = {
   engineerApprove: (id, data) => api.put(`/payments/${id}/engineer-approve`, data),
   financeApprove: (id, data) => api.put(`/payments/${id}/finance-approve`, data),
   reject: (id, data) => api.put(`/payments/${id}/reject`, data),
+  payOnline: (id, data) => api.post(`/payments/${id}/pay-online`, data),
+  getInvoice: (id) => api.get(`/payments/${id}/invoice`),
 };
 
 export const materialsAPI = {

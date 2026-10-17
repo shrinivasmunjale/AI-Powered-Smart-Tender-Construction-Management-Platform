@@ -76,6 +76,11 @@ router.get('/', authenticateToken, async (req, res) => {
     whereClause.status = { [Op.ne]: 'draft' };
   }
 
+  // Organizations (dashboard view): only see tenders published by their own organization
+  if (req.user.role === 'organization' && req.query.mine === 'true') {
+    whereClause.organizationId = req.user.id;
+  }
+
   if (category) {
     whereClause.category = category;
   }
@@ -139,6 +144,11 @@ router.put('/:id', authenticateToken, requireRole(['organization', 'admin']), as
       return res.status(404).json({ error: 'Tender not found.' });
     }
 
+    // Organizations can only update tenders published by their own organization
+    if (req.user.role !== 'admin' && tender.organizationId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden. You can only update tenders published by your organization.' });
+    }
+
     const previousStatus = tender.status;
 
     if (title) tender.title = title;
@@ -198,6 +208,11 @@ router.post('/:id/award', authenticateToken, requireRole(['organization', 'admin
     const tender = await Tender.findByPk(req.params.id);
     if (!tender) {
       return res.status(404).json({ error: 'Tender not found.' });
+    }
+
+    // Organizations can only award bids on tenders published by their own organization
+    if (req.user.role !== 'admin' && tender.organizationId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden. You can only award bids on tenders published by your organization.' });
     }
 
     const winningBid = await Bid.findByPk(bidId, {
