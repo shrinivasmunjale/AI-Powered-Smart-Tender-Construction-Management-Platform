@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: tenderbridge-api
+    env: node
+    region: oregon
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: DB_DIALECT
+        value: postgres
+      - key: DB_SSL
+        value: "true"
+      - key: JWT_SECRET
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false

@@ -1,10 +1,7 @@
 {
   "name": "tenderbridge",
   "version": "1.0.0",
-  "scripts": {
-    "build": "cd backend && npm install",
-    "start": "cd backend && npm start"
-  },
+  "private": true,
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0"
   },
