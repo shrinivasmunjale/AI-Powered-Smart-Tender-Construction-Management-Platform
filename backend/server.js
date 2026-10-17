@@ -52,6 +52,16 @@ app.use((req, res, next) => {
 // Serve uploads static folder
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Health-check (required by Render — returns 200 on GET /)
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'TenderBridge API',
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tenders', tenderRoutes);
@@ -65,6 +75,11 @@ app.use('/api/inspections', inspectionRoutes);
 app.use('/api/ai-chat', aiChatRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/public', publicRoutes);
+
+// 404 handler — catches unmatched routes
+app.use((req, res) => {
+  res.status(404).json({ error: `Route not found: ${req.method} ${req.originalUrl}` });
+});
 
 // Global error handler
 app.use((err, req, res, next) => {
