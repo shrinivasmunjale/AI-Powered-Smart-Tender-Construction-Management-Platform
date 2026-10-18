@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../utils/config';
 import AdminDashboard from './AdminDashboard';
 import ContractorDashboard from './ContractorDashboard';
 import NotificationLogger from './NotificationLogger';
@@ -21,7 +22,7 @@ export default function Dashboard({ onBackToLanding }) {
   // Fetch current user details if token exists
   const fetchProfile = async (currentToken) => {
     try {
-      const res = await fetch('http://localhost:5000/api/auth/profile', {
+      const res = await fetch(`${API_BASE_URL}/auth/profile`, {
         headers: { 'Authorization': `Bearer ${currentToken}` }
       });
       if (res.ok) {
@@ -67,7 +68,7 @@ export default function Dashboard({ onBackToLanding }) {
         };
 
     try {
-      const res = await fetch(`http://localhost:5000/api/auth/${endpoint}`, {
+      const res = await fetch(`${API_BASE_URL}/auth/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -109,7 +110,7 @@ export default function Dashboard({ onBackToLanding }) {
       : 'admin123';
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/login', {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: targetEmail, password: targetPassword })

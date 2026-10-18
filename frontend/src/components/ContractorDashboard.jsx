@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL, BACKEND_BASE_URL } from '../utils/config';
 import { Shield, FileText, Search, Clock, Award, CheckCircle, Upload, AlertTriangle } from 'lucide-react';
 
 export default function ContractorDashboard({ token, userRole = 'contractor', contractorStatus, companyName, onStatusUpdate }) {
@@ -27,7 +28,7 @@ export default function ContractorDashboard({ token, userRole = 'contractor', co
 
   const fetchTenders = async () => {
     try {
-      const url = `http://localhost:5000/api/tenders?category=${category}&search=${search}`;
+      const url = `${API_BASE_URL}/tenders?category=${category}&search=${search}`;
       const res = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -43,14 +44,14 @@ export default function ContractorDashboard({ token, userRole = 'contractor', co
   const fetchMyBids = async () => {
     try {
       // Fetch user profile to get their contractorId first
-      const profileRes = await fetch('http://localhost:5000/api/auth/profile', {
+      const profileRes = await fetch(`${API_BASE_URL}/auth/profile`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (profileRes.ok) {
         const profile = await profileRes.json();
         if (profile.Contractor) {
           // Fetch bids submitted by this contractor
-          const bidsRes = await fetch(`http://localhost:5000/api/bids/tender/1`, { // Temp query to get all bids
+          const bidsRes = await fetch(`${API_BASE_URL}/bids/tender/1`, { // Temp query to get all bids
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (bidsRes.ok) {
@@ -80,7 +81,7 @@ export default function ContractorDashboard({ token, userRole = 'contractor', co
     formData.append('verificationDoc', verificationFile);
 
     try {
-      const res = await fetch('http://localhost:5000/api/contractors/upload-docs', {
+      const res = await fetch(`${API_BASE_URL}/contractors/upload-docs`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -119,7 +120,7 @@ export default function ContractorDashboard({ token, userRole = 'contractor', co
     }
 
     try {
-      const res = await fetch('http://localhost:5000/api/bids', {
+      const res = await fetch(`${API_BASE_URL}/bids`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -349,7 +350,7 @@ export default function ContractorDashboard({ token, userRole = 'contractor', co
 
                 {selectedTender.documentPath && (
                   <div style={{ background: 'rgba(253,241,225,0.02)', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-light)', fontSize: '12px' }}>
-                    📄 Drawings specs: <a href={`http://localhost:5000${selectedTender.documentPath}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>Download PDF specifications</a>
+                    📄 Drawings specs: <a href={`${BACKEND_BASE_URL}${selectedTender.documentPath}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>Download PDF specifications</a>
                   </div>
                 )}
               </div>

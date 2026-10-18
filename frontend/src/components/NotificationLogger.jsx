@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../utils/config';
 
 export default function NotificationLogger({ token }) {
   const [logs, setLogs] = useState([]);
@@ -9,7 +10,7 @@ export default function NotificationLogger({ token }) {
 
     const fetchLogs = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/notifications', {
+        const response = await fetch(`${API_BASE_URL}/notifications`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../utils/config';
 import { 
   FileText, 
   DollarSign, 
@@ -43,7 +44,7 @@ export default function OrganizationDashboard({ token }) {
   const fetchTenders = async () => {
     setLoadingTenders(true);
     try {
-      const res = await fetch('http://localhost:5000/api/tenders?mine=true', {
+      const res = await fetch(`${API_BASE_URL}/tenders?mine=true`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -78,7 +79,7 @@ export default function OrganizationDashboard({ token }) {
     }
 
     try {
-      const res = await fetch('http://localhost:5000/api/tenders', {
+      const res = await fetch(`${API_BASE_URL}/tenders`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -118,7 +119,7 @@ export default function OrganizationDashboard({ token }) {
     setComparison(null);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/bids/tender/${tender.id}/compare`, {
+      const res = await fetch(`${API_BASE_URL}/bids/tender/${tender.id}/compare`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -139,7 +140,7 @@ export default function OrganizationDashboard({ token }) {
     }
 
     try {
-      const res = await fetch(`http://localhost:5000/api/tenders/${selectedTender.id}/award`, {
+      const res = await fetch(`${API_BASE_URL}/tenders/${selectedTender.id}/award`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

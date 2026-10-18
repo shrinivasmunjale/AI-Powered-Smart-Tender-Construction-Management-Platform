@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { API_BASE_URL } from '../utils/config';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
@@ -196,7 +197,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('http://localhost:5000/api/public/tenders')
+    fetch(`${API_BASE_URL}/public/tenders`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error('bad response'))))
       .then((data) => {
         if (!cancelled && Array.isArray(data) && data.length > 0) setTenders(data);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BACKEND_BASE_URL } from '../utils/config';
 import {
   User,
   Building2,
@@ -540,7 +541,7 @@ export const ProfileView = () => {
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                       <StatusBadge status="verified" />
                       <a
-                        href={`http://localhost:5000${contractor.verificationDocument}`}
+                        href={`${BACKEND_BASE_URL}${contractor.verificationDocument}`}
                         target="_blank"
                         rel="noreferrer"
                         className="btn btn-sm btn-secondary"
@@ -574,7 +575,7 @@ export const ProfileView = () => {
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                       <StatusBadge status={cert.status || 'verified'} />
                       <a
-                        href={`http://localhost:5000${cert.path}`}
+                        href={`${BACKEND_BASE_URL}${cert.path}`}
                         target="_blank"
                         rel="noreferrer"
                         className="btn btn-sm btn-secondary"

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../utils/config';
 import { 
   ShieldCheck, 
   Users, 
@@ -48,7 +49,7 @@ export default function AdminDashboard({ token, defaultTab = 'authorizations' })
   const fetchAuthorizations = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/auth/approval-requests', {
+      const res = await fetch(`${API_BASE_URL}/auth/approval-requests`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -65,7 +66,7 @@ export default function AdminDashboard({ token, defaultTab = 'authorizations' })
   // Fetch All Tenders for Activity Monitoring
   const fetchTenders = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/tenders', {
+      const res = await fetch(`${API_BASE_URL}/tenders`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -86,7 +87,7 @@ export default function AdminDashboard({ token, defaultTab = 'authorizations' })
   const handleApproveUser = async (userId, userEmail, entityName) => {
     setProcessingId(userId);
     try {
-      const res = await fetch(`http://localhost:5000/api/auth/approve-user/${userId}`, {
+      const res = await fetch(`${API_BASE_URL}/auth/approve-user/${userId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -117,7 +118,7 @@ export default function AdminDashboard({ token, defaultTab = 'authorizations' })
 
     setProcessingId(userId);
     try {
-      const res = await fetch(`http://localhost:5000/api/auth/reject-user/${userId}`, {
+      const res = await fetch(`${API_BASE_URL}/auth/reject-user/${userId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

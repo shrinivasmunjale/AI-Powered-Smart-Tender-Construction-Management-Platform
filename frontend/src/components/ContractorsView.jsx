@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BACKEND_BASE_URL } from '../utils/config';
 import {
   Users,
   ShieldCheck,
@@ -422,7 +423,7 @@ export const ContractorsView = ({ userRole = 'admin', token }) => {
                       {c.verificationDocument && (
                         <div style={{ marginBottom: '8px' }}>
                           <a
-                            href={`http://localhost:5000${c.verificationDocument}`}
+                            href={`${BACKEND_BASE_URL}${c.verificationDocument}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{
@@ -705,7 +706,7 @@ export const ContractorsView = ({ userRole = 'admin', token }) => {
                 <div style={{ gridColumn: 'span 2' }}>
                   <div style={{ color: 'var(--app-text-muted)', marginBottom: '4px' }}>Verification Document</div>
                   <a
-                    href={`http://localhost:5000${selectedContractor.verificationDocument}`}
+                    href={`${BACKEND_BASE_URL}${selectedContractor.verificationDocument}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn btn-secondary btn-sm"
