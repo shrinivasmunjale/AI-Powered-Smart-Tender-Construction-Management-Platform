@@ -68,7 +68,12 @@ async function runMigrations() {
   });
 
   try {
-    await sequelize.query(`UPDATE "Users" SET "approvalStatus" = 'approved' WHERE "role" IN ('admin', 'super_admin') OR "approvalStatus" IS NULL;`);
+    // Only fix admin/super_admin rows — never auto-approve pending contractors
+    const isPg = sequelize.getDialect() === 'postgres';
+    const query = isPg
+      ? `UPDATE "Users" SET "approvalStatus" = 'approved', "isActive" = true WHERE role IN ('admin', 'super_admin') AND ("approvalStatus" IS NULL OR "approvalStatus" = '')`
+      : `UPDATE Users SET approvalStatus = 'approved', isActive = 1 WHERE role IN ('admin', 'super_admin') AND (approvalStatus IS NULL OR approvalStatus = '')`;
+    await sequelize.query(query);
   } catch (e) {
     // ignore if table doesn't have column yet
   }

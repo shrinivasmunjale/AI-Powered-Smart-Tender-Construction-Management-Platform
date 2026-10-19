@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
+  ShieldCheck,
   FileText,
   Users,
   Building2,
@@ -17,6 +18,7 @@ import clsx from 'clsx';
 const navigationConfig = {
   admin: [
     { icon: <LayoutDashboard size={20} />, label: 'Dashboard', id: 'dashboard' },
+    { icon: <ShieldCheck size={20} />, label: 'Authorizations', id: 'authorizations' },
     { icon: <FileText size={20} />, label: 'Tenders', id: 'tenders' },
     { icon: <Users size={20} />, label: 'Contractors', id: 'contractors' },
     { icon: <Building2 size={20} />, label: 'Projects', id: 'projects' },

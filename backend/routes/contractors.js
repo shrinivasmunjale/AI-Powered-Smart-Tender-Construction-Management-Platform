@@ -37,7 +37,7 @@ router.put('/upload-docs', authenticateToken, requireRole('contractor'), upload.
 router.get('/', authenticateToken, requireRole(['admin', 'engineer', 'project_manager']), async (req, res) => {
   try {
     const contractors = await Contractor.findAll({
-      include: [{ model: User, attributes: ['email'] }]
+      include: [{ model: User, attributes: ['email', 'approvalStatus', 'isActive', 'firstName', 'lastName', 'phone', 'role'] }]
     });
     res.json(contractors);
   } catch (err) {

@@ -41,6 +41,9 @@ export const EnhancedDashboard = () => {
       case 'dashboard':
         return <DashboardHome userRole={user?.role} />;
 
+      case 'authorizations':
+        return <AdminDashboard token={token} />;
+
       case 'tenders':
         if (user?.role === 'admin') {
           return <AdminTendersView token={token} />;

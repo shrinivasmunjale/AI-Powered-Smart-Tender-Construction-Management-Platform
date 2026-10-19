@@ -71,8 +71,17 @@ export const DashboardStats = ({ userRole, stats: propStats }) => {
           iconColor="success"
           title="Verified Contractors"
           value={contractors.verified || 0}
-          subtitle={`${contractors.pending || 0} pending`}
+          subtitle={`${contractors.pending || 0} docs pending`}
         />
+        {userRole === 'admin' && (
+          <StatCard
+            icon={<ShieldCheck size={20} />}
+            iconColor={(stats.authorizations?.pending || 0) > 0 ? "warning" : "success"}
+            title="Pending Authorizations"
+            value={stats.authorizations?.pending ?? 0}
+            subtitle={`${stats.authorizations?.approved ?? 0} authorized accounts`}
+          />
+        )}
         <StatCard
           icon={<DollarSign size={20} />}
           iconColor="warning"

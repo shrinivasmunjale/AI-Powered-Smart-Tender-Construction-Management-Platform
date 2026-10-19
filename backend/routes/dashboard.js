@@ -36,6 +36,14 @@ router.get('/stats', authenticateToken, async (req, res) => {
       pending: await Contractor.count({ where: { verificationStatus: 'pending' } }),
       rejected: await Contractor.count({ where: { verificationStatus: 'rejected' } })
     };
+
+    // === USER AUTHORIZATIONS ===
+    stats.authorizations = {
+      pending: await User.count({ where: { approvalStatus: 'pending' } }),
+      approved: await User.count({ where: { approvalStatus: 'approved' } }),
+      rejected: await User.count({ where: { approvalStatus: 'rejected' } }),
+      total: await User.count()
+    };
     
     // === PROJECTS ===
     const now = new Date();

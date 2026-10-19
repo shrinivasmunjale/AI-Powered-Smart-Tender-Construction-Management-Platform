@@ -19,7 +19,8 @@ import {
   Filter
 } from 'lucide-react';
 
-export default function AdminDashboard({ token, defaultTab = 'authorizations' }) {
+export default function AdminDashboard({ token: propToken, defaultTab = 'authorizations' }) {
+  const token = propToken || localStorage.getItem('token');
   const [activeTab, setActiveTab] = useState(defaultTab); // 'authorizations' | 'tender_activity'
   
   useEffect(() => {
@@ -40,7 +41,8 @@ export default function AdminDashboard({ token, defaultTab = 'authorizations' })
   const [selectedTender, setSelectedTender] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Loading & Feedback
+  // Filter & Loading & Feedback
+  const [approvalFilter, setApprovalFilter] = useState('pending');
   const [loading, setLoading] = useState(false);
   const [processingId, setProcessingId] = useState(null);
   const [feedbackMsg, setFeedbackMsg] = useState('');

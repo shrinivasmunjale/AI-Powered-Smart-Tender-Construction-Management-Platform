@@ -39,6 +39,8 @@ export const ContractorsView = ({ userRole = 'admin', token }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'verified' | 'pending' | 'rejected'
   const [authFilter, setAuthFilter] = useState('pending'); // 'pending' | 'approved' | 'rejected' | 'all'
+  const [authRoleFilter, setAuthRoleFilter] = useState('all'); // 'all' | 'contractor' | 'organization'
+  const [authSearch, setAuthSearch] = useState('');
   const [selectedContractor, setSelectedContractor] = useState(null);
   const [processingId, setProcessingId] = useState(null);
 
@@ -142,11 +144,20 @@ export const ContractorsView = ({ userRole = 'admin', token }) => {
   const pendingCount = contractors.filter(c => c.verificationStatus === 'pending').length;
   const rejectedCount = contractors.filter(c => c.verificationStatus === 'rejected').length;
 
-  // Contractor-specific authorization requests
-  const contractorAuthList = (authFilter === 'all'
-    ? approvalRequests.all
-    : approvalRequests[authFilter] || []
-  ).filter(u => u.role === 'contractor');
+  // Authorization requests for all registered entities (contractor & organization)
+  const rawAuthList = authFilter === 'all'
+    ? (approvalRequests.all || [])
+    : (approvalRequests[authFilter] || []);
+
+  const authList = rawAuthList.filter(u => {
+    const matchesRole = authRoleFilter === 'all' || u.role === authRoleFilter;
+    const q = authSearch.toLowerCase();
+    const entity = (u.organizationName || u.Contractor?.companyName || `${u.firstName || ''} ${u.lastName || ''}`).toLowerCase();
+    const email = (u.email || '').toLowerCase();
+    const reg = (u.registrationNumber || u.Contractor?.registrationNumber || '').toLowerCase();
+    const matchesSearch = !authSearch || entity.includes(q) || email.includes(q) || reg.includes(q);
+    return matchesRole && matchesSearch;
+  });
 
   return (
     <div className="view-container">
@@ -250,8 +261,8 @@ export const ContractorsView = ({ userRole = 'admin', token }) => {
             <Clock size={20} />
           </div>
           <div className="stat-info">
-            <h4>Pending Verification</h4>
-            <p>{pendingCount}</p>
+            <h4>Pending Logins</h4>
+            <p>{approvalRequests.summary?.totalPending || 0}</p>
           </div>
         </div>
 
@@ -260,8 +271,8 @@ export const ContractorsView = ({ userRole = 'admin', token }) => {
             <XCircle size={20} />
           </div>
           <div className="stat-info">
-            <h4>Rejected / Incomplete</h4>
-            <p>{rejectedCount}</p>
+            <h4>Docs Pending / Rejected</h4>
+            <p>{pendingCount} / {rejectedCount}</p>
           </div>
         </div>
       </div>
@@ -491,7 +502,8 @@ export const ContractorsView = ({ userRole = 'admin', token }) => {
       {activeTab === 'authorizations' && (
         <div className="card" style={{ background: 'var(--app-bg-secondary)', border: '1px solid var(--app-border)', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            {/* Status Filter Buttons */}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <button
                 className={`btn btn-sm ${authFilter === 'pending' ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setAuthFilter('pending')}
@@ -514,22 +526,90 @@ export const ContractorsView = ({ userRole = 'admin', token }) => {
                 className={`btn btn-sm ${authFilter === 'all' ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setAuthFilter('all')}
               >
-                All Requests
+                All Requests ({approvalRequests.summary.totalUsers || approvalRequests.all?.length || 0})
               </button>
+            </div>
+
+            {/* Role Filter & Search */}
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', background: 'var(--app-bg-primary)', padding: '3px', borderRadius: '8px', border: '1px solid var(--app-border)' }}>
+                <button
+                  type="button"
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: authRoleFilter === 'all' ? 'var(--primary)' : 'transparent',
+                    color: authRoleFilter === 'all' ? '#fff' : 'var(--app-text-muted)',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => setAuthRoleFilter('all')}
+                >
+                  All Roles
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: authRoleFilter === 'contractor' ? 'var(--primary)' : 'transparent',
+                    color: authRoleFilter === 'contractor' ? '#fff' : 'var(--app-text-muted)',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => setAuthRoleFilter('contractor')}
+                >
+                  Contractors
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: authRoleFilter === 'organization' ? 'var(--primary)' : 'transparent',
+                    color: authRoleFilter === 'organization' ? '#fff' : 'var(--app-text-muted)',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => setAuthRoleFilter('organization')}
+                >
+                  Organizations
+                </button>
+              </div>
+
+              <div style={{ position: 'relative', width: '220px' }}>
+                <Search size={15} style={{ position: 'absolute', left: '10px', top: '10px', color: 'var(--app-text-muted)' }} />
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Search email, name..."
+                  value={authSearch}
+                  onChange={(e) => setAuthSearch(e.target.value)}
+                  style={{ paddingLeft: '32px', height: '34px', fontSize: '12px' }}
+                />
+              </div>
             </div>
           </div>
 
-          {contractorAuthList.length === 0 ? (
+          {authList.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '3.5rem 1rem', color: 'var(--app-text-muted)' }}>
               <ShieldCheck size={44} style={{ opacity: 0.3, marginBottom: '1rem' }} />
-              <p style={{ fontSize: '15px', fontWeight: 600 }}>No authorization requests found in this filter.</p>
+              <p style={{ fontSize: '15px', fontWeight: 600 }}>No authorization requests found matching filters.</p>
+              <p style={{ fontSize: '13px' }}>Check other filters or wait for new applicant registrations.</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {contractorAuthList.map((user) => {
-                const entityName = user.Contractor?.companyName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
-                const regNumber = user.Contractor?.registrationNumber || 'N/A';
+              {authList.map((user) => {
+                const entityName = user.organizationName || user.Contractor?.companyName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
+                const regNumber = user.registrationNumber || user.Contractor?.registrationNumber || 'N/A';
                 const isPending = user.approvalStatus === 'pending';
+                const isOrg = user.role === 'organization';
 
                 return (
                   <div
@@ -538,7 +618,7 @@ export const ContractorsView = ({ userRole = 'admin', token }) => {
                       padding: '16px 20px',
                       borderRadius: '12px',
                       background: 'var(--app-bg-primary)',
-                      border: `1px solid ${isPending ? 'rgba(245, 158, 11, 0.3)' : 'var(--app-border)'}`,
+                      border: `1px solid ${isPending ? 'rgba(245, 158, 11, 0.4)' : 'var(--app-border)'}`,
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
@@ -547,18 +627,25 @@ export const ContractorsView = ({ userRole = 'admin', token }) => {
                     }}
                   >
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
                         <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--app-text-primary)' }}>
                           {entityName}
                         </h4>
-                        <span className="badge badge-primary">CONTRACTOR</span>
-                        <span className={`badge ${user.approvalStatus === 'approved' ? 'badge-success' : user.approvalStatus === 'rejected' ? 'badge-danger' : 'badge-warning'}`}>
-                          {user.approvalStatus.toUpperCase()}
+                        <span className={`badge ${isOrg ? 'badge-info' : 'badge-primary'}`}>
+                          {isOrg ? 'ORGANIZATION' : 'CONTRACTOR'}
                         </span>
+                        <span className={`badge ${user.approvalStatus === 'approved' ? 'badge-success' : user.approvalStatus === 'rejected' ? 'badge-danger' : 'badge-warning'}`}>
+                          {user.approvalStatus ? user.approvalStatus.toUpperCase() : 'PENDING'}
+                        </span>
+                        {!user.isActive && (
+                          <span className="badge badge-warning" style={{ fontSize: '11px', background: 'rgba(245, 158, 11, 0.15)', color: '#d97706', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                            INACTIVE / AWAITING APPROVAL
+                          </span>
+                        )}
                       </div>
                       <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: 'var(--app-text-muted)', flexWrap: 'wrap' }}>
-                        <span>Reg ID: <strong>{regNumber}</strong></span>
-                        <span>Email: {user.email}</span>
+                        <span>Reg / Org ID: <strong>{regNumber}</strong></span>
+                        <span>Email: <strong style={{ color: 'var(--app-text-primary)' }}>{user.email}</strong></span>
                         {user.phone && <span>Phone: {user.phone}</span>}
                         <span>Registered: {new Date(user.createdAt).toLocaleDateString()}</span>
                       </div>
